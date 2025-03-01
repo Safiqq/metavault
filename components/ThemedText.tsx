@@ -1,60 +1,55 @@
-import { Text, type TextProps, StyleSheet } from 'react-native';
+import React from "react";
 
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { Text, TextProps } from "react-native";
+import { forwardRef } from "react";
 
-export type ThemedTextProps = TextProps & {
-  lightColor?: string;
-  darkColor?: string;
-  type?: 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link';
-};
+interface ThemedTextProps extends TextProps {
+  fontWeight?: 200 | 300 | 400 | 500 | 600 | 700 | 800;
+  fontStyle?: "normal" | "italic";
+  fontSize?: number;
+  paddingVertical?: number;
+}
 
-export function ThemedText({
-  style,
-  lightColor,
-  darkColor,
-  type = 'default',
-  ...rest
-}: ThemedTextProps) {
-  const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
+export const ThemedText = forwardRef((props: ThemedTextProps, ref) => {
+  let fontSize = props.fontSize || 16;
+  let paddingVertical = props.paddingVertical || 6;
+
+  let fontFamily = "";
+  let fontWeight = props.fontWeight || 400;
+  let fontStyle = props.fontStyle || "normal";
+
+  if (fontStyle == "italic") {
+    if (fontWeight == 200) fontFamily = "PlusJakartaSans_200ExtraLight_Italic";
+    else if (fontWeight == 300) fontFamily = "PlusJakartaSans_300Light_Italic";
+    else if (fontWeight == 400)
+      fontFamily = "PlusJakartaSans_400Regular_Italic";
+    else if (fontWeight == 500) fontFamily = "PlusJakartaSans_500Medium_Italic";
+    else if (fontWeight == 600)
+      fontFamily = "PlusJakartaSans_600SemiBold_Italic";
+    else if (fontWeight == 700) fontFamily = "PlusJakartaSans_700Bold_Italic";
+    else if (fontWeight == 800)
+      fontFamily = "PlusJakartaSans_800ExtraBold_Italic";
+  } else {
+    if (fontWeight == 200) fontFamily = "PlusJakartaSans_200ExtraLight";
+    else if (fontWeight == 300) fontFamily = "PlusJakartaSans_300Light";
+    else if (fontWeight == 400) fontFamily = "PlusJakartaSans_400Regular";
+    else if (fontWeight == 500) fontFamily = "PlusJakartaSans_500Medium";
+    else if (fontWeight == 600) fontFamily = "PlusJakartaSans_600SemiBold";
+    else if (fontWeight == 700) fontFamily = "PlusJakartaSans_700Bold";
+    else if (fontWeight == 800) fontFamily = "PlusJakartaSans_800ExtraBold";
+  }
 
   return (
     <Text
+      {...props}
       style={[
-        { color },
-        type === 'default' ? styles.default : undefined,
-        type === 'title' ? styles.title : undefined,
-        type === 'defaultSemiBold' ? styles.defaultSemiBold : undefined,
-        type === 'subtitle' ? styles.subtitle : undefined,
-        type === 'link' ? styles.link : undefined,
-        style,
+        props.style,
+        {
+          fontSize,
+          paddingVertical,
+          fontFamily,
+        },
       ]}
-      {...rest}
     />
   );
-}
-
-const styles = StyleSheet.create({
-  default: {
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  defaultSemiBold: {
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: '600',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    lineHeight: 32,
-  },
-  subtitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  link: {
-    lineHeight: 30,
-    fontSize: 16,
-    color: '#0a7ea4',
-  },
 });
