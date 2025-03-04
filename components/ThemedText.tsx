@@ -11,12 +11,12 @@ interface ThemedTextProps extends TextProps {
 }
 
 export const ThemedText = forwardRef((props: ThemedTextProps, ref) => {
-  let fontSize = props.fontSize || 16;
-  let paddingVertical = props.paddingVertical || 6;
+  let fontSize = props.fontSize ?? 16;
+  let paddingVertical = props.paddingVertical ?? 6;
 
   let fontFamily = "";
-  let fontWeight = props.fontWeight || 400;
-  let fontStyle = props.fontStyle || "normal";
+  let fontWeight = props.fontWeight ?? 400;
+  let fontStyle = props.fontStyle ?? "normal";
 
   if (fontStyle == "italic") {
     if (fontWeight == 200) fontFamily = "PlusJakartaSans_200ExtraLight_Italic";
