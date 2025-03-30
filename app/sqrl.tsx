@@ -7,10 +7,10 @@ import { ProgressSteps } from "@/components/ProgressSteps";
 
 export default function SQRLScreen() {
   return (
-    <SafeAreaView className="flex-1 bg-white mt-7 mx-12">
+    <SafeAreaView className="flex-1 bg-white mx-12">
       <ScrollView className="flex-1">
         <ProgressSteps currentStep={1} />
-        <View>
+        <View className="mt-10">
           <Image
             className="max-w-15 max-h-15"
             source={require("@/assets/images/scan.png")}
