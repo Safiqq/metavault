@@ -7,7 +7,7 @@ interface ProgressStepsProps {
 
 export function ProgressSteps(props: ProgressStepsProps) {
   return (
-    <View className="py-4">
+    <View className="mt-7">
       <ThemedText fontWeight={700} fontSize={20} className="text-center mb-5">
         MetaVault
       </ThemedText>
