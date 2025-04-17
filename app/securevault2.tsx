@@ -1,15 +1,18 @@
-import { Image, Pressable, ScrollView, View } from "react-native";
+import { Image, Platform, Pressable, ScrollView, View } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/ThemedText";
 import Spacer from "@/components/Spacer";
 import { ProgressSteps } from "@/components/ProgressSteps";
+import { Link } from "expo-router";
 
 export default function SecureVault2Screen() {
   return (
-    <SafeAreaView className="flex-1 bg-white mx-12">
-      <ScrollView className="flex-1">
-        <ProgressSteps currentStep={2} />
+    <SafeAreaView
+      className={`flex-1 w-full ${Platform.OS == "web" && "max-w-2xl mx-auto"}`}
+    >
+      <ScrollView className="flex-1 px-12">
+        <ProgressSteps currentStep={3} />
         <View className="mt-10 mb-8">
           <Image
             className="max-w-10 max-h-10 mx-auto"
@@ -45,8 +48,8 @@ export default function SecureVault2Screen() {
           </View>
 
           <Spacer size={16} />
-          
-          <View className="bg-[#EBEBEB] py-3 px-4 rounded-lg">
+
+          <View className="bg-[#EBEBEB] py-3 px-4 rounded-lg -mx-6">
             <ThemedText fontWeight={700}>Manual</ThemedText>
 
             <Spacer size={8} />
@@ -88,12 +91,14 @@ export default function SecureVault2Screen() {
           </View>
         </View>
       </ScrollView>
-      <View className="mt-4 mb-8">
-        <Pressable className="bg-black w-full py-3 rounded-xl">
-          <ThemedText fontWeight={700} className="text-white text-center">
-            Start
-          </ThemedText>
-        </Pressable>
+      <View className="mt-4 mb-8 px-12">
+        <Link href="/srp" asChild>
+          <Pressable className="bg-black w-full py-3 rounded-xl">
+            <ThemedText fontWeight={700} className="text-white text-center">
+              Start
+            </ThemedText>
+          </Pressable>
+        </Link>
       </View>
     </SafeAreaView>
   );

@@ -1,15 +1,18 @@
-import { Image, Pressable, ScrollView, View } from "react-native";
+import { Image, Platform, Pressable, ScrollView, View } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/ThemedText";
 import Spacer from "@/components/Spacer";
 import { ProgressSteps } from "@/components/ProgressSteps";
+import { Link } from "expo-router";
 
 export default function SecureVaultScreen() {
   return (
-    <SafeAreaView className="flex-1 bg-white mx-12">
-      <ScrollView className="flex-1">
-        <ProgressSteps currentStep={2} />
+    <SafeAreaView
+      className={`flex-1 w-full ${Platform.OS == "web" && "max-w-2xl mx-auto"}`}
+    >
+      <ScrollView className="flex-1 px-12">
+        <ProgressSteps currentStep={3} />
         <View className="mt-10">
           <ThemedText fontWeight={700} fontSize={24} className="text-center">
             Secure your vault
@@ -40,12 +43,14 @@ export default function SecureVaultScreen() {
           </ThemedText>
         </View>
       </ScrollView>
-      <View className="mb-8">
-        <Pressable className="bg-black w-full py-3 rounded-xl">
-          <ThemedText fontWeight={700} className="text-white text-center">
-            Start
-          </ThemedText>
-        </Pressable>
+      <View className="mb-8 px-12">
+        <Link href="/securevault2" asChild>
+          <Pressable className="bg-black w-full py-3 rounded-xl">
+            <ThemedText fontWeight={700} className="text-white text-center">
+              Start
+            </ThemedText>
+          </Pressable>
+        </Link>
       </View>
     </SafeAreaView>
   );

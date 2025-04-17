@@ -1,4 +1,4 @@
-import { Image, Pressable, ScrollView, View } from "react-native";
+import { Image, Platform, Pressable, ScrollView, View } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/ThemedText";
@@ -6,8 +6,10 @@ import Spacer from "@/components/Spacer";
 
 export default function LockedScreen() {
   return (
-    <SafeAreaView className="flex-1 bg-white my-32 mx-12">
-      <ScrollView className="flex-1">
+    <SafeAreaView
+      className={`flex-1 my-32 ${Platform.OS == "web" && "max-w-2xl mx-auto"}`}
+    >
+      <ScrollView className="flex-1 px-12">
         <View>
           <Image
             className="max-w-15 max-h-15"
