@@ -1,72 +1,47 @@
-import { Image, Pressable, ScrollView, View } from "react-native";
+import { Image, Platform, Pressable, View } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/ThemedText";
+import React, { useState } from "react";
+import { Switch } from "@/components/ui/Switch";
+import { Line } from "@/components/ui/Line";
 import Spacer from "@/components/Spacer";
+import { DropdownMenu } from "@/components/ui/DropdownMenu";
+import { MenuOption } from "@/components/ui/MenuOption";
+import { Header } from "@/components/ui/Header";
+import { Link } from "expo-router";
 
 export default function LandingScreen() {
   return (
-    <SafeAreaView className="flex-1 bg-white my-32 mx-12">
-      <ScrollView className="flex-1">
-        <View>
-          <ThemedText fontWeight={700} fontSize={28}>
-            Create an Account without a Master Password
-          </ThemedText>
+    <SafeAreaView
+      className={`flex-1 w-full ${Platform.OS == "web" && "max-w-2xl mx-auto"}`}
+    >
+      <Header titleText="MetaVault" />
+      <View className="mt-10 items-center">
+        <Image
+          className="max-w-40 max-h-40"
+          source={require("@/assets/images/strongbox-fill.png")}
+        />
 
-          <Spacer size={16} />
+        <Spacer size={16} />
 
-          <View className="bg-[#EBEBEB] py-3 px-2 flex flex-row items-start gap-4">
-            <Image
-              className="max-w-4 max-h-4"
-              source={require("@/assets/images/info-circle.png")}
-            />
-            <View className="-mt-1 mr-4">
-              <ThemedText paddingVertical={0}>
-                <ThemedText fontSize={14}>
-                  Master passwords, which are a{" "}
-                </ThemedText>
-                <ThemedText fontSize={14} fontWeight={700}>
-                  'something you know'
-                </ThemedText>
-                <ThemedText fontSize={14}>
-                  , type of authentication factor, are vulnerable, especially
-                  since hardware capabilities are increasing exponentially.
-                </ThemedText>
-              </ThemedText>
-            </View>
-          </View>
+        <ThemedText fontSize={24} fontWeight={700}>
+          Vault setup
+        </ThemedText>
 
-          <Spacer size={16} />
+        <Spacer size={16} />
 
-          <ThemedText>
-            <ThemedText>
-              Go passwordless and use another authentication factor (such as{" "}
-            </ThemedText>
-            <ThemedText fontWeight={700}>'something you have'</ThemedText>
-            <ThemedText> or </ThemedText>
-            <ThemedText fontWeight={700}>'something you are'</ThemedText>
-            <ThemedText>) to log in.</ThemedText>
-          </ThemedText>
-          <ThemedText>
-            Available authentication methods(s) for your device:
-          </ThemedText>
-          <ThemedText> • Fingerprint</ThemedText>
-          <ThemedText> • Face authentication</ThemedText>
-          <ThemedText> • Face ID</ThemedText>
-          <ThemedText> • Secure, Quick, Reliable Login (SQRL)</ThemedText>
-        </View>
-      </ScrollView>
-      <View>
-        <Pressable className="bg-black w-full py-3 rounded-xl">
-          <ThemedText fontWeight={700} className="text-white text-center">
-            Get started
-          </ThemedText>
-        </Pressable>
-        <Spacer size={8} />
-        <Pressable className="bg-[#D9D9D9] w-full py-3 rounded-xl">
-          <ThemedText className="text-center">Learn more</ThemedText>
-        </Pressable>
+        <ThemedText>Import an existing vault or create a new one</ThemedText>
       </View>
+      <View className="mt-4 mb-8">
+              <Link href="/main" asChild>
+                <Pressable className="bg-black w-full py-3 rounded-xl">
+                  <ThemedText fontWeight={700} className="text-white text-center">
+                    Done
+                  </ThemedText>
+                </Pressable>
+              </Link>
+            </View>
     </SafeAreaView>
   );
 }
