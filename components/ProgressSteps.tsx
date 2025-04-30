@@ -48,7 +48,7 @@ export function ProgressSteps(props: ProgressStepsProps) {
                 props.currentStep > 1 && "text-black/40"
               }`}
             >
-              Create login methods
+              Assign an email
             </ThemedText>
           </View>
           <View className="w-24 items-center">
@@ -91,12 +91,12 @@ export function ProgressSteps(props: ProgressStepsProps) {
                 props.currentStep > 2 && "text-black/40"
               }`}
             >
-              Secure vault
+              Create login methods
             </ThemedText>
           </View>
           <View className="w-24 items-end">
             <View
-              className={`absolute mt-1.5 h-0.5 mr-4 w-full ${
+              className={`absolute mt-1.5 h-0.5 right-0 mr-4 w-full ${
                 props.currentStep > 2 ? "bg-black/40" : "bg-black"
               }`}
             />
@@ -114,7 +114,7 @@ export function ProgressSteps(props: ProgressStepsProps) {
               </ThemedText>
             </View>
             <ThemedText fontSize={10} className="-mr-8 max-w-20 text-center">
-              Confirm secret recovery phrase
+            Secure vault
             </ThemedText>
           </View>
         </View>
