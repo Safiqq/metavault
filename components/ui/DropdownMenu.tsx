@@ -26,7 +26,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
   children,
   dropdownWidth = 300,
   pos = "center",
-  maxHeight = 200,
+  maxHeight = 250,
 }) => {
   const triggerRef = useRef<View>(null);
   const [position, setPosition] = useState({ x: 0, y: 0, width: 0 });
@@ -63,7 +63,8 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
           onRequestClose={handleClose}
         >
           <TouchableWithoutFeedback onPress={handleClose}>
-            <View className="flex-1 justify-start items-start bg-transparent">
+            <View className="flex-1">
+              {/* <View className="flex-1 justify-start items-start"> */}
               <View
                 className="absolute bg-[#4B4B4B] rounded-xl px-4 py-2"
                 style={{
