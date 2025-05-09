@@ -5,9 +5,13 @@ import { ThemedText } from "@/components/ThemedText";
 import Spacer from "@/components/Spacer";
 import { ProgressSteps } from "@/components/ProgressSteps";
 import { Link, useLocalSearchParams } from "expo-router";
+import { ThemedTextInput } from "@/components/ThemedTextInput";
+import { useState } from "react";
 
 export default function CreateAccountScreen() {
   const { availableAuthMethods } = useLocalSearchParams();
+  const [email, setEmail] = useState<string>("");
+  const [name, setName] = useState<string>("");
 
   return (
     <SafeAreaView
@@ -34,7 +38,14 @@ export default function CreateAccountScreen() {
               <ThemedText fontSize={12} fontWeight={800}>
                 Email (required)
               </ThemedText>
-              <ThemedText fontSize={14}>johndoe@gmail.com</ThemedText>
+              <ThemedTextInput
+                fontSize={14}
+                className="flex-1 outline-none"
+                placeholder="Enter your email"
+                value={email}
+                onChangeText={setEmail}
+                autoFocus
+              />
             </View>
           </View>
 
@@ -45,7 +56,14 @@ export default function CreateAccountScreen() {
               <ThemedText fontSize={12} fontWeight={800}>
                 Name
               </ThemedText>
-              <ThemedText fontSize={14}>John Doe</ThemedText>
+              <ThemedTextInput
+                fontSize={14}
+                className="flex-1 outline-none"
+                placeholder="Enter your name"
+                value={name}
+                onChangeText={setName}
+                autoFocus
+              />
             </View>
           </View>
 
@@ -66,13 +84,14 @@ export default function CreateAccountScreen() {
         </ThemedText>
         <Link
           href={
+            // Go to faceauthentication first
             availableAuthMethods.includes("1")
-              ? `/authentication/fingerprint?availableAuthMethods=${availableAuthMethods}`
-              : availableAuthMethods.includes("2")
-              ? `/authentication/faceauthentication?availableAuthMethods=${availableAuthMethods}`
-              : availableAuthMethods.includes("4")
-              ? `/authentication/sqrl?availableAuthMethods=${availableAuthMethods}`
-              : "/"
+              ? `/authentication/faceauthentication?availableAuthMethods=${availableAuthMethods}&email=${email}&name=${name}`
+              : // : availableAuthMethods.includes("2")
+                // ? // Go to fingerprint if no faceauthentication available
+                `/authentication/fingerprint?availableAuthMethods=${availableAuthMethods}&email=${email}&name=${name}`
+            // : // Go to sqrl if no fingerprint available
+            // `/authentication/sqrl?availableAuthMethods=${availableAuthMethods}&email=${email}&name=${name}`
           }
           asChild
         >

@@ -5,14 +5,27 @@ import { ThemedText } from "@/components/ThemedText";
 import Spacer from "@/components/Spacer";
 import { ProgressSteps } from "@/components/ProgressSteps";
 import { Link } from "expo-router";
+import { useNavigationState } from "@react-navigation/native";
+import { Header } from "@/components/ui/Header";
+import React from "react";
 
 export default function ConfirmSecretRecoveryPhraseScreen() {
+  const navigationState = useNavigationState((state) => state);
+  const routes = navigationState?.routes || [];
+  const isFromImportSRP = routes.some(
+    (route) => route.name === "importfromsrp"
+  );
+
   return (
     <SafeAreaView
       className={`flex-1 w-full ${Platform.OS == "web" && "max-w-2xl mx-auto"}`}
     >
       <ScrollView className="flex-1 px-12">
-        <ProgressSteps currentStep={3} />
+        {isFromImportSRP ? (
+          <Header titleText="MetaVault" />
+        ) : (
+          <ProgressSteps currentStep={3} />
+        )}
         <View className="mt-10 mb-8">
           <ThemedText fontWeight={700} fontSize={24} className="text-center">
             Congratulations!
@@ -27,34 +40,43 @@ export default function ConfirmSecretRecoveryPhraseScreen() {
 
           <Spacer size={16} />
 
-          <ThemedText className="text-center">
-            Your vault is protected and ready to use. You can find your Secret
-            Recovery Phrase in{" "}
-            <ThemedText fontWeight={700}>
-              Settings {">"} Security & Privacy.
+          {isFromImportSRP ? (
+            <ThemedText className="text-center">
+              Remember, if you lose your Secret Recovery Phrase, you lose access
+              to your vault.
             </ThemedText>
-          </ThemedText>
+          ) : (
+            <>
+              <ThemedText className="text-center">
+                Your vault is protected and ready to use. You can find your
+                Secret Recovery Phrase in{" "}
+                <ThemedText fontWeight={700}>
+                  Settings {">"} Security & Privacy.
+                </ThemedText>
+              </ThemedText>
 
-          <Spacer size={16} />
+              <Spacer size={16} />
 
-          <ThemedText fontWeight={500} className="text-[#0099FF]">
-            Leave yourself a hint?
-          </ThemedText>
+              <ThemedText fontWeight={500} className="text-[#0099FF]">
+                Leave yourself a hint?
+              </ThemedText>
 
-          <Spacer size={16} />
+              <Spacer size={16} />
 
-          <ThemedText>
-            Keep a reminder of your Secret Recovery Phrase somewhere safe. If
-            you lose it, no one can help you get it back. Even worse, you won't
-            be able to access to your wallet ever again.{" "}
-            <ThemedText fontWeight={500} className="text-[#0099FF]">
-              Learn more
-            </ThemedText>
-          </ThemedText>
+              <ThemedText>
+                Keep a reminder of your Secret Recovery Phrase somewhere safe.
+                If you lose it, no one can help you get it back. Even worse, you
+                won't be able to access to your wallet ever again.{" "}
+                <ThemedText fontWeight={500} className="text-[#0099FF]">
+                  Learn more
+                </ThemedText>
+              </ThemedText>
+            </>
+          )}
         </View>
       </ScrollView>
       <View className="mt-4 mb-8">
-        <Link href="/main" asChild>
+        <Link href="/(tabs)/myvault" asChild>
           <Pressable className="bg-black w-full py-3 rounded-xl">
             <ThemedText fontWeight={700} className="text-white text-center">
               Done

@@ -1,47 +1,49 @@
-import { Image, Platform, Pressable, View } from "react-native";
+import React from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+} from "react-native";
+import NfcManager, { NfcTech } from "react-native-nfc-manager";
 
-import { SafeAreaView } from "react-native-safe-area-context";
-import { ThemedText } from "@/components/ThemedText";
-import React, { useState } from "react";
-import { Switch } from "@/components/ui/Switch";
-import { Line } from "@/components/ui/Line";
-import Spacer from "@/components/Spacer";
-import { DropdownMenu } from "@/components/ui/DropdownMenu";
-import { MenuOption } from "@/components/ui/MenuOption";
-import { Header } from "@/components/ui/Header";
-import { Link } from "expo-router";
+// Pre-step, call this before any NFC operations
+if (Platform.OS == "android" || Platform.OS == "ios") {
+  NfcManager.start();
+}
 
-export default function LandingScreen() {
+function App() {
+  async function readNdef() {
+    try {
+      // register for the NFC tag with NDEF in it
+      await NfcManager.requestTechnology(NfcTech.Ndef);
+      // the resolved tag object will contain `ndefMessage` property
+      const tag = await NfcManager.getTag();
+      console.warn("Tag found", tag);
+    } catch (ex) {
+      console.warn("Oops!", ex);
+    } finally {
+      // stop the nfc scanning
+      NfcManager.cancelTechnologyRequest();
+    }
+  }
+
   return (
-    <SafeAreaView
-      className={`flex-1 w-full ${Platform.OS == "web" && "max-w-2xl mx-auto"}`}
-    >
-      <Header titleText="MetaVault" />
-      <View className="mt-10 items-center">
-        <Image
-          className="max-w-40 max-h-40"
-          source={require("@/assets/images/strongbox-fill.png")}
-        />
-
-        <Spacer size={16} />
-
-        <ThemedText fontSize={24} fontWeight={700}>
-          Vault setup
-        </ThemedText>
-
-        <Spacer size={16} />
-
-        <ThemedText>Import an existing vault or create a new one</ThemedText>
-      </View>
-      <View className="mt-4 mb-8">
-              <Link href="/main" asChild>
-                <Pressable className="bg-black w-full py-3 rounded-xl">
-                  <ThemedText fontWeight={700} className="text-white text-center">
-                    Done
-                  </ThemedText>
-                </Pressable>
-              </Link>
-            </View>
-    </SafeAreaView>
+    <View style={styles.wrapper}>
+      <TouchableOpacity onPress={readNdef}>
+        <Text>Scan a Tag</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+});
+
+export default App;
