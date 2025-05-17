@@ -65,7 +65,7 @@ export const EditFolder: React.FC<EditFolderProps> = ({
           </DropdownMenu>
         </View>
       </View>
-      <View className="bg-[#EBEBEB] mx-6 my-5 px-4 py-3 rounded-lg gap-2">
+      <View className="bg-[#EBEBEB] mx-6 my-5 px-4 py-3 rounded-lg">
         <ThemedText fontSize={12} fontWeight={800}>Name</ThemedText>
         <ThemedText fontSize={14}>{folderName}</ThemedText>
       </View>
