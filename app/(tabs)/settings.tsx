@@ -9,7 +9,7 @@ import { Line } from "@/components/ui/Line";
 export default function AccountSecurityScreen() {
   return (
     <SafeAreaView
-      className={`flex-1 w-full ${Platform.OS == "web" && "max-w-2xl mx-auto"}`}
+      className={`flex-1 w-full px-12 ${Platform.OS == "web" && "max-w-2xl mx-auto"}`}
     >
       <View className="p-6 pb-5 border-b border-[#EBEBEB]">
         <View className="flex flex-row justify-between">

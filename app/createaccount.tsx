@@ -4,18 +4,70 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/ThemedText";
 import Spacer from "@/components/Spacer";
 import { ProgressSteps } from "@/components/ProgressSteps";
-import { Link, useLocalSearchParams } from "expo-router";
+import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { ThemedTextInput } from "@/components/ThemedTextInput";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { largeSecureStore, supabase } from "@/lib/supabase";
+import { useAlert } from "@/contexts/AlertContext";
+import { AvailableAuthMethods } from "@/lib/types";
 
 export default function CreateAccountScreen() {
-  const { availableAuthMethods } = useLocalSearchParams();
+  const [availableAuthMethods, setAvailableAuthMethods] = useState<
+    AvailableAuthMethods[]
+  >([]);
   const [email, setEmail] = useState<string>("");
   const [name, setName] = useState<string>("");
 
+  const router = useRouter();
+  const { alert } = useAlert();
+
+  useEffect(() => {
+    async function getAuthMethods() {
+      try {
+        const availableAuthMethods =
+          (await largeSecureStore.getItem("availableAuthMethods")) || "";
+
+        setAvailableAuthMethods(JSON.parse(availableAuthMethods));
+      } catch (error) {
+        console.error("Failed to retrieve or parse auth methods:", error);
+      }
+    }
+
+    getAuthMethods();
+  }, []);
+
+  async function signInWithEmailOtp(email: string) {
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email,
+    });
+
+    if (error) {
+      console.error("Error sending OTP:", error.message);
+    } else {
+      // Prompt the user to check their email for the OTP
+      alert("Success", "Check your email for an OTP code.", [{ text: "OK" }]);
+    }
+  }
+
+  const handleContinue = () => {
+    availableAuthMethods.includes(AvailableAuthMethods.FINGERPRINT)
+      ? router.push(
+          `/authentication/faceauthentication?availableAuthMethods=${availableAuthMethods}&email=${email}&name=${name}`
+        )
+      : // : availableAuthMethods.includes("2")
+        // ? // Go to fingerprint if no faceauthentication available
+        router.push(
+          `/authentication/fingerprint?availableAuthMethods=${availableAuthMethods}&email=${email}&name=${name}`
+        );
+    // : // Go to sqrl if no fingerprint available
+    // `/authentication/sqrl?availableAuthMethods=${availableAuthMethods}&email=${email}&name=${name}`
+  };
+
   return (
     <SafeAreaView
-      className={`flex-1 w-full ${Platform.OS == "web" && "max-w-2xl mx-auto"}`}
+      className={`flex-1 w-full px-12 ${
+        Platform.OS == "web" && "max-w-2xl mx-auto"
+      }`}
     >
       <ScrollView className="flex-1 px-12">
         <ProgressSteps currentStep={1} />
@@ -82,7 +134,7 @@ export default function CreateAccountScreen() {
             Privacy Policy
           </ThemedText>
         </ThemedText>
-        <Link
+        {/* <Link
           href={
             // Go to faceauthentication first
             availableAuthMethods.includes("1")
@@ -94,13 +146,16 @@ export default function CreateAccountScreen() {
             // `/authentication/sqrl?availableAuthMethods=${availableAuthMethods}&email=${email}&name=${name}`
           }
           asChild
+        > */}
+        <Pressable
+          className="bg-black w-full py-3 rounded-xl"
+          onPress={handleContinue}
         >
-          <Pressable className="bg-black w-full py-3 rounded-xl">
-            <ThemedText fontWeight={700} className="text-white text-center">
-              Continue
-            </ThemedText>
-          </Pressable>
-        </Link>
+          <ThemedText fontWeight={700} className="text-white text-center">
+            Continue
+          </ThemedText>
+        </Pressable>
+        {/* </Link> */}
       </View>
     </SafeAreaView>
   );

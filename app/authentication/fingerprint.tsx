@@ -13,7 +13,7 @@ import Spacer from "@/components/Spacer";
 import { ProgressSteps } from "@/components/ProgressSteps";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import * as LocalAuthentication from "expo-local-authentication";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { largeSecureStore } from "@/lib/supabase";
 
 export default function FingerprintScreen() {
@@ -96,12 +96,12 @@ export default function FingerprintScreen() {
     // router.push(
     //   `/authentication/sqrl?availableAuthMethods=${availableAuthMethods}&email=${email}&name=${name}`
     // );
-    router.push("")
+    router.push("/securevault")
   };
 
   return (
     <SafeAreaView
-      className={`flex-1 w-full ${Platform.OS == "web" && "max-w-2xl mx-auto"}`}
+      className={`flex-1 w-full px-12 ${Platform.OS == "web" && "max-w-2xl mx-auto"}`}
     >
       <ScrollView className="flex-1 px-12">
         <ProgressSteps currentStep={2} />
@@ -127,7 +127,7 @@ export default function FingerprintScreen() {
       </ScrollView>
       <View className="mb-8 px-12">
         <Link
-          href={`/authentication/sqrl?availableAuthMethods=${availableAuthMethods}&email=${email}&name=${name}`}
+          href="/securevault"
           asChild
         >
           <Pressable

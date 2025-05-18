@@ -10,7 +10,7 @@ export default function OtherScreen() {
 
   return (
     <SafeAreaView
-      className={`flex-1 w-full ${Platform.OS == "web" && "max-w-2xl mx-auto"}`}
+      className={`flex-1 w-full px-12 ${Platform.OS == "web" && "max-w-2xl mx-auto"}`}
     >
       <View className="p-6 border-b border-[#EBEBEB] flex flex-row items-center">
         <View className="flex-1">

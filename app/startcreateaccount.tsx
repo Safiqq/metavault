@@ -11,15 +11,10 @@ import {
 } from "expo-local-authentication";
 // import { useCameraPermissions } from "expo-camera";
 import React, { useEffect, useState } from "react";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { Header } from "@/components/ui/Header";
-
-enum AvailableAuthMethods {
-  Fingerprint = 1,
-  "Face authentication" = 2,
-  "Face ID" = 2,
-  // "Secure, Quick, Reliable Login (SQRL)" = 4,
-}
+import { largeSecureStore } from "@/lib/supabase";
+import { AvailableAuthMethods } from "@/lib/types";
 
 export default function StartCreateAccountScreen() {
   const [availableAuthMethods, setAvailableAuthMethods] = useState<
@@ -29,19 +24,31 @@ export default function StartCreateAccountScreen() {
   // const [permission, requestPermission] = useCameraPermissions();
   const [loading, setLoading] = useState(true);
 
+  const router = useRouter();
+
+  const handleGetStarted = () => {
+    largeSecureStore.setItem(
+      "availableAuthMethods",
+      JSON.stringify(availableAuthMethods)
+    );
+    router.push("/createaccount");
+  };
+
   useEffect(() => {
     async function checkBiometrics() {
       try {
         const compatible = await hasHardwareAsync();
+        console.log("compatible", compatible);
 
         if (compatible) {
           const types = await supportedAuthenticationTypesAsync();
+
           const isEnrolled = await isEnrolledAsync();
 
           const authMethods = [];
 
           if (isEnrolled && types.includes(AuthenticationType.FINGERPRINT)) {
-            authMethods.push(AvailableAuthMethods.Fingerprint);
+            authMethods.push(AvailableAuthMethods.FINGERPRINT);
           }
 
           if (
@@ -49,9 +56,9 @@ export default function StartCreateAccountScreen() {
             types.includes(AuthenticationType.FACIAL_RECOGNITION)
           ) {
             if (Platform.OS === "ios") {
-              authMethods.push(AvailableAuthMethods["Face ID"]);
+              authMethods.push(AvailableAuthMethods.FACE_ID);
             } else {
-              authMethods.push(AvailableAuthMethods["Face authentication"]);
+              authMethods.push(AvailableAuthMethods.FACE_AUTHENTICATION);
             }
           }
 
@@ -83,7 +90,9 @@ export default function StartCreateAccountScreen() {
 
   return (
     <SafeAreaView
-      className={`flex-1 w-full ${Platform.OS == "web" && "max-w-2xl mx-auto"}`}
+      className={`flex-1 w-full px-12 ${
+        Platform.OS == "web" && "max-w-2xl mx-auto"
+      }`}
     >
       <Header
         titleText="MetaVault"
@@ -153,21 +162,17 @@ export default function StartCreateAccountScreen() {
         </View>
       </ScrollView>
       <View className="mb-8 px-12">
-        <Link
-          href={`/createaccount?availableAuthMethods=${encodeURIComponent(
-            JSON.stringify(availableAuthMethods)
-          )}`}
-          asChild
+        <Pressable
+          className={`bg-black w-full py-3 rounded-xl ${
+            availableAuthMethods.length === 0 && "hidden"
+          }`}
+          disabled={availableAuthMethods.length === 0}
+          onPress={handleGetStarted}
         >
-          <Pressable
-            className="bg-black w-full py-3 rounded-xl"
-            disabled={availableAuthMethods.length === 0}
-          >
-            <ThemedText fontWeight={700} className="text-white text-center">
-              Get started
-            </ThemedText>
-          </Pressable>
-        </Link>
+          <ThemedText fontWeight={700} className="text-white text-center">
+            Get started
+          </ThemedText>
+        </Pressable>
 
         <Spacer size={8} />
 

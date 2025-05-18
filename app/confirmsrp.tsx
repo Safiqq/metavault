@@ -18,7 +18,7 @@ export default function ConfirmSecretRecoveryPhraseScreen() {
 
   return (
     <SafeAreaView
-      className={`flex-1 w-full ${Platform.OS == "web" && "max-w-2xl mx-auto"}`}
+      className={`flex-1 w-full px-12 ${Platform.OS == "web" && "max-w-2xl mx-auto"}`}
     >
       <ScrollView className="flex-1 px-12">
         {isFromImportSRP ? (
@@ -76,13 +76,13 @@ export default function ConfirmSecretRecoveryPhraseScreen() {
         </View>
       </ScrollView>
       <View className="mt-4 mb-8">
-        <Link href="/(tabs)/myvault" asChild>
+        {/* <Link href="/(tabs)/myvault" asChild> */}
           <Pressable className="bg-black w-full py-3 rounded-xl">
             <ThemedText fontWeight={700} className="text-white text-center">
               Done
             </ThemedText>
           </Pressable>
-        </Link>
+        {/* </Link> */}
       </View>
     </SafeAreaView>
   );

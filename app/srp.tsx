@@ -36,7 +36,7 @@ export default function SecretRecoveryPhraseScreen() {
 
   return (
     <SafeAreaView
-      className={`flex-1 w-full ${
+      className={`flex-1 w-full px-12 ${
         Platform.OS === "web" && "max-w-2xl mx-auto"
       }`}
     >
