@@ -11,14 +11,6 @@ import React, {
   useMemo,
 } from "react";
 
-// Error constants for consistent error messages
-const ERROR_MESSAGES = {
-  AUTH_CONTEXT: "useAuth must be used within an AuthProvider",
-  SESSION_FETCH: "Failed to fetch session",
-  SESSION_REFRESH: "Failed to refresh session",
-  RATE_LIMIT: "Too many requests. Please try again later.",
-} as const;
-
 // Rate limiting configuration
 const RATE_LIMIT = {
   REFRESH_WINDOW_MS: 60 * 1000, // 1 minute
@@ -91,7 +83,7 @@ export const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
       
       setSession(data.session);
     } catch (err) {
-      const errorMessage = getErrorMessage(err, ERROR_MESSAGES.SESSION_FETCH);
+      const errorMessage = getErrorMessage(err, "Failed to fetch session");
       setError(errorMessage);
       console.error("Session fetch error:", err);
     } finally {
@@ -139,8 +131,8 @@ export const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
     
     // Check rate limit
     if (refreshAttempts.current >= RATE_LIMIT.MAX_REFRESH_ATTEMPTS) {
-      setError(ERROR_MESSAGES.RATE_LIMIT);
-      throw new Error(ERROR_MESSAGES.RATE_LIMIT);
+      setError("Too many requests. Please try again later.");
+      throw new Error("Too many requests. Please try again later.");
     }
     
     try {
@@ -162,7 +154,7 @@ export const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
       setSession(data.session);
       return data.session;
     } catch (err) {
-      const errorMessage = getErrorMessage(err, ERROR_MESSAGES.SESSION_REFRESH);
+      const errorMessage = getErrorMessage(err, "Failed to refresh session");
       setError(errorMessage);
       console.error("Session refresh error:", err);
       throw err; // Re-throw to allow error handling by the caller
@@ -220,7 +212,7 @@ export const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error(ERROR_MESSAGES.AUTH_CONTEXT);
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
