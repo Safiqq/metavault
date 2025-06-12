@@ -1,110 +1,139 @@
-import { ThemedText } from "@/components/ThemedText";
-import React, { useState } from "react";
-import { Image, Pressable, View } from "react-native";
-import { DropdownMenu } from "../DropdownMenu";
-import { MenuOption } from "../MenuOption";
 import Spacer from "@/components/Spacer";
-import { VaultItem } from "@/database.types";
-import { Line } from "../Line";
-import { useClipboard } from "@/utils/clipboard";
+import { ThemedText } from "@/components/ThemedText";
 import { ThemedTextInput } from "@/components/ThemedTextInput";
+import { supabase } from "@/lib/supabase";
+import { DecryptedLoginItem, DecryptedSSHKeyItem } from "@/lib/types";
+import React, { useEffect, useState } from "react";
+import { Pressable, ScrollView, View } from "react-native";
+import { DropdownMenu } from "../DropdownMenu";
+import { Line } from "../Line";
+import { MenuOption } from "../MenuOption";
+
+import {
+  CopyIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  MoreIcon,
+} from "@/assets/images/icons";
+import { useClipboard } from "@/lib/clipboard";
 
 interface ViewCredentialProps {
-  item: VaultItem;
-  leftCallback: () => void;
-  rightCallback: () => void;
+  onClose: () => void;
+  onEdit: () => void;
+  itemType: "login" | "ssh_key";
+  item?: DecryptedLoginItem | DecryptedSSHKeyItem;
 }
 
 export const ViewCredential: React.FC<ViewCredentialProps> = ({
+  onClose,
+  onEdit,
+  itemType,
   item,
-  leftCallback,
-  rightCallback,
 }) => {
-  const [isMoreVisible, setIsMoreVisible] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const [isMoreVisible, setIsMoreVisible] = useState<boolean>(false);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [folderName, setFolderName] = useState<string>("");
 
   const { copyToClipboard } = useClipboard();
 
-  const handleDelete = async () => {};
+  const handleEdit = onEdit;
+
+  const handleDelete = async () => {
+    if (itemType === "login") {
+      await supabase.from("logins").update("deleted_at");
+    }
+  };
+
+  useEffect(() => {
+    const getFolderName = async () => {
+      if (!item || !item.folder_id) return;
+
+      const { data, error } = await supabase
+        .from("folders")
+        .select()
+        .eq("id", item.folder_id)
+        .single();
+      if (error) return;
+      setFolderName(data.name);
+    };
+    getFolderName();
+  }, [item]);
 
   return (
     <View className="absolute bg-white w-full z-20 bottom-0 rounded-t-lg h-3/4">
-      <View className="rounded-t-lg bg-[#EBEBEB] flex flex-row justify-between py-3 px-6">
+      <View className="rounded-t-lg bg-[#EBEBEB] flex flex-row justify-between py-4 px-6 items-center">
         <View className="flex-1">
-          <Pressable onPress={leftCallback}>
+          <Pressable onPress={onClose}>
             <ThemedText fontSize={14} className="text-[#0099FF]">
               Close
             </ThemedText>
           </Pressable>
         </View>
-        <View className="flex-1">
-          <ThemedText
-            fontSize={14}
-            fontWeight={700}
-            className="absolute w-full text-center"
-          >
-            View {item.item_type == "login" ? "login" : "SSH key"}
+        <View className="flex-1 items-center">
+          <ThemedText fontSize={14} fontWeight={700}>
+            View credential
           </ThemedText>
         </View>
-        <View className="flex flex-row flex-1 justify-end items-center gap-3">
-          <Pressable onPress={rightCallback}>
-            <ThemedText fontSize={14} className="text-[#0099FF]">
-              Edit
-            </ThemedText>
-          </Pressable>
-          <DropdownMenu
-            visible={isMoreVisible}
-            handleOpen={() => setIsMoreVisible(true)}
-            handleClose={() => setIsMoreVisible(false)}
-            trigger={
-              <Image
-                className="max-w-6 max-h-6"
-                source={require("@/assets/images/more.png")}
-              />
-            }
-            pos="right"
-          >
-            <MenuOption
-              onSelect={() => {
-                setIsMoreVisible(false);
-                leftCallback();
-                handleDelete();
-              }}
-            >
-              <ThemedText fontSize={14} className="text-[#FF4646]">
-                Delete
+        <View className="flex-1 items-end">
+          <View className="flex flex-row items-center gap-3">
+            <Pressable onPress={handleEdit}>
+              <ThemedText fontSize={14} className="text-[#0099FF]">
+                Edit
               </ThemedText>
-            </MenuOption>
-          </DropdownMenu>
+            </Pressable>
+            <DropdownMenu
+              visible={isMoreVisible}
+              handleOpen={() => setIsMoreVisible(true)}
+              handleClose={() => setIsMoreVisible(false)}
+              trigger={
+                <MoreIcon width={16} height={16} className="cursor-pointer" />
+              }
+              pos="right"
+            >
+              <MenuOption
+                onSelect={() => {
+                  setIsMoreVisible(false);
+                  onClose();
+                  handleDelete();
+                }}
+              >
+                <ThemedText fontSize={14} className="text-[#FF4646]">
+                  Delete
+                </ThemedText>
+              </MenuOption>
+            </DropdownMenu>
+          </View>
         </View>
       </View>
-      <View className="mx-6 my-5">
+
+      <ScrollView>
+      <View className="mx-6">
+        <Spacer size={20} />
         <ThemedText fontSize={12} fontWeight={800}>
           ITEM DETAILS
         </ThemedText>
 
         <Spacer size={4} />
 
-        <View className="bg-[#EBEBEB] px-4 py-3 rounded-lg gap-2">
+        <View className="bg-[#EBEBEB] px-4 py-4 rounded-lg gap-2">
           <View>
             <ThemedText fontSize={12} fontWeight={800}>
               Item name
             </ThemedText>
             <View className="flex flex-row gap-2 items-center">
-              {item.item_type == "login" ? (
-                <Image
-                  className="max-w-4 max-h-4 w-4 h-4 rounded-md"
-                  source={{
-                    uri: `https://www.google.com/s2/favicons?sz=64&domain=${item.website}`,
-                  }}
-                />
-              ) : (
-                <Image
-                  className="max-w-4 max-h-4"
-                  source={require("@/assets/images/key.png")}
-                />
-              )}
-              <ThemedText fontSize={14}>{item.item_name}</ThemedText>
+              <ThemedTextInput
+                fontSize={14}
+                className="flex-1 outline-none"
+                editable={false}
+                value={item?.item_name}
+              />
+              <Pressable
+                onPress={async () =>
+                  await copyToClipboard(item?.item_name ?? "", "Item name")
+                }
+              >
+                <CopyIcon width={16} />
+              </Pressable>
             </View>
           </View>
 
@@ -115,22 +144,19 @@ export const ViewCredential: React.FC<ViewCredentialProps> = ({
               Folder
             </ThemedText>
             <View className="flex flex-row gap-2 items-center justify-between">
-              <ThemedText fontSize={14}>{item.folder_name}</ThemedText>
+              <ThemedText fontSize={14}>{folderName}</ThemedText>
               <Pressable
                 onPress={async () =>
-                  await copyToClipboard(item.folder_name || "", "Folder name")
+                  await copyToClipboard(folderName, "Folder name")
                 }
               >
-                <Image
-                  className="max-w-4 max-h-4"
-                  source={require("@/assets/images/copy.png")}
-                />
+                <CopyIcon width={16} />
               </Pressable>
             </View>
           </View>
         </View>
 
-        {item.item_type == "login" && (
+        {itemType === "login" && (
           <>
             <Spacer size={16} />
 
@@ -140,25 +166,27 @@ export const ViewCredential: React.FC<ViewCredentialProps> = ({
 
             <Spacer size={4} />
 
-            <View className="bg-[#EBEBEB] px-4 py-3 rounded-lg gap-2">
+            <View className="bg-[#EBEBEB] px-4 py-4 rounded-lg gap-2">
               <View>
                 <ThemedText fontSize={12} fontWeight={800}>
                   Username
                 </ThemedText>
-                <View className="flex flex-row gap-2 items-center justify-between">
-                  <ThemedText fontSize={14}>{item.username_hashed}</ThemedText>
+                <View className="flex flex-row gap-2 items-center">
+                  <ThemedTextInput
+                    fontSize={14}
+                    className="flex-1 outline-none"
+                    editable={false}
+                    value={(item as DecryptedLoginItem).username}
+                  />
                   <Pressable
                     onPress={async () =>
                       await copyToClipboard(
-                        item.username_hashed || "",
+                        (item as DecryptedLoginItem).username,
                         "Username"
                       )
                     }
                   >
-                    <Image
-                      className="max-w-4 max-h-4"
-                      source={require("@/assets/images/copy.png")}
-                    />
+                    <CopyIcon width={16} />
                   </Pressable>
                 </View>
               </View>
@@ -169,44 +197,33 @@ export const ViewCredential: React.FC<ViewCredentialProps> = ({
                 <ThemedText fontSize={12} fontWeight={800}>
                   Password
                 </ThemedText>
-                <View className="flex flex-row gap-2 items-center justify-between">
+                <View className="flex flex-row gap-2 items-center">
                   <ThemedTextInput
-                    className="outline-none"
                     fontSize={14}
-                    secureTextEntry={!showPassword}
-                    value={item.password_hashed}
+                    className="flex-1 outline-none"
+                    secureTextEntry={showPassword}
                     editable={false}
+                    value={(item as DecryptedLoginItem).password}
                   />
-                  <View className="flex flex-row gap-2 items-center">
-                    <Pressable
-                      onPress={async () => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? (
-                        <Image
-                          className="max-w-4 max-h-4"
-                          source={require("@/assets/images/eye.png")}
-                        />
-                      ) : (
-                        <Image
-                          className="max-w-4 max-h-4"
-                          source={require("@/assets/images/eye-slash.png")}
-                        />
-                      )}
-                    </Pressable>
-                    <Pressable
-                      onPress={async () =>
-                        await copyToClipboard(
-                          item.password_hashed || "",
-                          "Password"
-                        )
-                      }
-                    >
-                      <Image
-                        className="max-w-4 max-h-4"
-                        source={require("@/assets/images/copy.png")}
-                      />
-                    </Pressable>
-                  </View>
+                  <Pressable
+                    onPress={async () => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeIcon width={16} />
+                    ) : (
+                      <EyeSlashIcon width={16} />
+                    )}
+                  </Pressable>
+                  <Pressable
+                    onPress={async () =>
+                      await copyToClipboard(
+                        (item as DecryptedLoginItem).password,
+                        "Password"
+                      )
+                    }
+                  >
+                    <CopyIcon width={16} />
+                  </Pressable>
                 </View>
               </View>
             </View>
@@ -219,22 +236,27 @@ export const ViewCredential: React.FC<ViewCredentialProps> = ({
 
             <Spacer size={4} />
 
-            <View className="bg-[#EBEBEB] px-4 py-3 rounded-lg gap-2">
+            <View className="bg-[#EBEBEB] px-4 py-4 rounded-lg gap-2">
               <View>
                 <ThemedText fontSize={12} fontWeight={800}>
                   Website (URI)
                 </ThemedText>
-                <View className="flex flex-row gap-2 items-center justify-between">
-                  <ThemedText fontSize={14}>{item.website}</ThemedText>
+                <View className="flex flex-row gap-2 items-center">
+                  <ThemedTextInput
+                    fontSize={14}
+                    className="flex-1 outline-none"
+                    editable={false}
+                    value={(item as DecryptedLoginItem).website}
+                  />
                   <Pressable
                     onPress={async () =>
-                      await copyToClipboard(item.website || "", "Website")
+                      await copyToClipboard(
+                        (item as DecryptedLoginItem).website ?? "",
+                        "Website (URI)"
+                      )
                     }
                   >
-                    <Image
-                      className="max-w-4 max-h-4"
-                      source={require("@/assets/images/copy.png")}
-                    />
+                    <CopyIcon width={16} />
                   </Pressable>
                 </View>
               </View>
@@ -242,7 +264,7 @@ export const ViewCredential: React.FC<ViewCredentialProps> = ({
           </>
         )}
 
-        {item.item_type == "ssh_key" && (
+        {itemType === "ssh_key" && (
           <>
             <Spacer size={16} />
 
@@ -252,27 +274,27 @@ export const ViewCredential: React.FC<ViewCredentialProps> = ({
 
             <Spacer size={4} />
 
-            <View className="bg-[#EBEBEB] px-4 py-3 rounded-lg gap-2">
+            <View className="bg-[#EBEBEB] px-4 py-4 rounded-lg gap-2">
               <View>
                 <ThemedText fontSize={12} fontWeight={800}>
                   Public key
                 </ThemedText>
-                <View className="flex flex-row gap-2 items-center justify-between">
-                  <ThemedText fontSize={14}>
-                    {item.public_key_hashed}
-                  </ThemedText>
+                <View className="flex flex-row gap-2 items-center">
+                  <ThemedTextInput
+                    fontSize={14}
+                    className="flex-1 outline-none"
+                    editable={false}
+                    value={(item as DecryptedSSHKeyItem).public_key}
+                  />
                   <Pressable
                     onPress={async () =>
                       await copyToClipboard(
-                        item.public_key_hashed || "",
+                        (item as DecryptedSSHKeyItem).public_key,
                         "Public key"
                       )
                     }
                   >
-                    <Image
-                      className="max-w-4 max-h-4"
-                      source={require("@/assets/images/copy.png")}
-                    />
+                    <CopyIcon width={16} />
                   </Pressable>
                 </View>
               </View>
@@ -283,44 +305,32 @@ export const ViewCredential: React.FC<ViewCredentialProps> = ({
                 <ThemedText fontSize={12} fontWeight={800}>
                   Private key
                 </ThemedText>
-                <View className="flex flex-row gap-2 items-center justify-between">
+                <View className="flex flex-row gap-2 items-center">
                   <ThemedTextInput
-                    className="flex-1 outline-none"
                     fontSize={14}
-                    secureTextEntry={!showPassword}
-                    value={item.private_key_hashed}
+                    className="flex-1 outline-none"
                     editable={false}
+                    value={(item as DecryptedSSHKeyItem).private_key}
                   />
-                  <View className="flex flex-row gap-2 items-center">
-                    <Pressable
-                      onPress={async () => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? (
-                        <Image
-                          className="max-w-4 max-h-4"
-                          source={require("@/assets/images/eye.png")}
-                        />
-                      ) : (
-                        <Image
-                          className="max-w-4 max-h-4"
-                          source={require("@/assets/images/eye-slash.png")}
-                        />
-                      )}
-                    </Pressable>
-                    <Pressable
-                      onPress={async () =>
-                        await copyToClipboard(
-                          item.private_key_hashed || "",
-                          "Private key"
-                        )
-                      }
-                    >
-                      <Image
-                        className="max-w-4 max-h-4"
-                        source={require("@/assets/images/copy.png")}
-                      />
-                    </Pressable>
-                  </View>
+                  <Pressable
+                    onPress={async () => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeIcon width={16} height={16} />
+                    ) : (
+                      <EyeSlashIcon width={16} height={16} />
+                    )}
+                  </Pressable>
+                  <Pressable
+                    onPress={async () =>
+                      await copyToClipboard(
+                        (item as DecryptedSSHKeyItem).private_key,
+                        "Private key"
+                      )
+                    }
+                  >
+                    <CopyIcon width={16} />
+                  </Pressable>
                 </View>
               </View>
 
@@ -330,29 +340,31 @@ export const ViewCredential: React.FC<ViewCredentialProps> = ({
                 <ThemedText fontSize={12} fontWeight={800}>
                   Fingerprint
                 </ThemedText>
-                <View className="flex flex-row gap-2 items-center justify-between">
-                  <ThemedText fontSize={14}>
-                    {item.fingerprint_hashed}
-                  </ThemedText>
+                <View className="flex flex-row gap-2 items-center">
+                  <ThemedTextInput
+                    fontSize={14}
+                    className="flex-1 outline-none"
+                    editable={false}
+                    value={(item as DecryptedSSHKeyItem).fingerprint}
+                  />
                   <Pressable
                     onPress={async () =>
                       await copyToClipboard(
-                        item.fingerprint_hashed || "",
+                        (item as DecryptedSSHKeyItem).fingerprint,
                         "Fingerprint"
                       )
                     }
                   >
-                    <Image
-                      className="max-w-4 max-h-4"
-                      source={require("@/assets/images/copy.png")}
-                    />
+                    <CopyIcon width={16} />
                   </Pressable>
                 </View>
               </View>
             </View>
           </>
         )}
+        <Spacer size={20} />
       </View>
+      </ScrollView>
     </View>
   );
 };
