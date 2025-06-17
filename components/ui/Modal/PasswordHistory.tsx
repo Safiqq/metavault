@@ -1,9 +1,14 @@
+import { CopyIcon, MoreIcon } from "@/assets/images/icons";
+import Spacer from "@/components/Spacer";
 import { ThemedText } from "@/components/ThemedText";
+import { useAppState } from "@/contexts/AppStateProvider";
+import { formatDate } from "@/lib/utils";
 import React, { useState } from "react";
-import { Image, Pressable, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { DropdownMenu } from "../DropdownMenu";
-import { MenuOption } from "../MenuOption";
 import { Line } from "../Line";
+import { MenuOption } from "../MenuOption";
+import { useClipboard } from "@/lib/clipboard";
 
 interface PasswordHistoryProps {
   callback: () => void;
@@ -12,11 +17,23 @@ interface PasswordHistoryProps {
 export const PasswordHistory: React.FC<PasswordHistoryProps> = ({
   callback,
 }) => {
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState<boolean>(false);
+
+  const { state, setState } = useAppState();
+  const { copyToClipboard } = useClipboard();
+
+  const handleCopy = async (text: string) => {
+    await copyToClipboard(text, "Passphrase");
+  };
+
+  const handleClear = () => {
+    setVisible(false);
+    setState({ ...state, generatorData: [] });
+  };
 
   return (
     <View className="absolute bg-white w-full z-20 bottom-0 rounded-t-lg h-3/4">
-      <View className="rounded-t-lg bg-[#EBEBEB] flex flex-row justify-between py-3 px-6">
+      <View className="rounded-t-lg bg-[#EBEBEB] flex flex-row justify-between py-4 px-6 items-center">
         <View className="flex-1">
           <Pressable onPress={callback}>
             <ThemedText fontSize={14} className="text-[#0099FF]">
@@ -24,12 +41,8 @@ export const PasswordHistory: React.FC<PasswordHistoryProps> = ({
             </ThemedText>
           </Pressable>
         </View>
-        <View className="flex-1">
-          <ThemedText
-            fontSize={14}
-            fontWeight={700}
-            className="absolute w-full text-center"
-          >
+        <View className="flex-1 items-center">
+          <ThemedText fontSize={14} fontWeight={700}>
             Password history
           </ThemedText>
         </View>
@@ -39,18 +52,11 @@ export const PasswordHistory: React.FC<PasswordHistoryProps> = ({
             handleOpen={() => setVisible(true)}
             handleClose={() => setVisible(false)}
             trigger={
-              <Image
-                className="max-w-6 max-h-6"
-                source={require("@/assets/images/more.png")}
-              />
+              <MoreIcon width={24} height={24} className="cursor-pointer" />
             }
             pos="right"
           >
-            <MenuOption
-              onSelect={() => {
-                setVisible(false);
-              }}
-            >
+            <MenuOption onSelect={handleClear}>
               <ThemedText fontSize={14} className="text-white">
                 Clear
               </ThemedText>
@@ -58,91 +64,34 @@ export const PasswordHistory: React.FC<PasswordHistoryProps> = ({
           </DropdownMenu>
         </View>
       </View>
-      <View className="bg-[#EBEBEB] mx-6 my-5 px-4 py-3 rounded-lg gap-2">
-        <View>
-          <View className="flex flex-row justify-between gap-4 items-center">
-            <ThemedText fontSize={14}>
-              Hedge
-              <ThemedText fontSize={14} fontWeight={800}>
-                0960
-              </ThemedText>
+      <View className="mx-6">
+        <Spacer size={20} />
+        <View className="bg-[#EBEBEB] px-4 py-4 rounded-lg gap-2">
+          {state.generatorData.length > 0 ? (
+            state.generatorData.toReversed().map((item, index) => (
+              <React.Fragment key={index}>
+                <View>
+                  <View className="flex flex-row justify-between gap-4 items-center">
+                    <ThemedText fontSize={14}>{item.text}</ThemedText>
+                    <Pressable onPress={() => handleCopy(item.text)}>
+                      <CopyIcon width={24} height={24} />
+                    </Pressable>
+                  </View>
+                  <Spacer size={4} />
+                  <ThemedText fontSize={10} fontWeight={300}>
+                    {formatDate(item.createdAt)}
+                  </ThemedText>
+                </View>
+                {index < state.generatorData.length - 1 && <Line />}
+              </React.Fragment>
+            ))
+          ) : (
+            <ThemedText fontSize={14} className="text-gray-600 text-center py-2">
+              No password history yet.
             </ThemedText>
-            <Image
-              className="max-w-6 max-h-6"
-              source={require("@/assets/images/copy.png")}
-            />
-          </View>
-          <ThemedText fontSize={10} fontWeight={300}>
-            25/04/2024 09:58
-          </ThemedText>
+          )}
         </View>
-
-        <Line />
-
-        <View>
-          <View className="flex flex-row justify-between gap-4 items-center">
-            <ThemedText fontSize={14}>
-              johndoe+v
-              <ThemedText fontSize={14} fontWeight={800}>
-                2
-              </ThemedText>
-              jfy
-              <ThemedText fontSize={14} fontWeight={800}>
-                6
-              </ThemedText>
-              rc@gmail.com
-            </ThemedText>
-            <Image
-              className="max-w-6 max-h-6"
-              source={require("@/assets/images/copy.png")}
-            />
-          </View>
-          <ThemedText fontSize={10} fontWeight={300}>
-            25/04/2024 09:55
-          </ThemedText>
-        </View>
-
-        <Line />
-
-        <View>
-          <View className="flex flex-row justify-between gap-4 items-center">
-            <ThemedText fontSize={14}>
-              Jumble-Coil
-              <ThemedText fontSize={14} fontWeight={800}>
-                6
-              </ThemedText>
-              -Copier-Lend-Krypton-Reassure-Guileless-Unreached-Entomb-Extradite-Resample-Retying
-            </ThemedText>
-            <Image
-              className="max-w-6 max-h-6"
-              source={require("@/assets/images/copy.png")}
-            />
-          </View>
-          <ThemedText fontSize={10} fontWeight={300}>
-            25/04/2024 09:50
-          </ThemedText>
-        </View>
-
-        <Line />
-
-        <View>
-          <View className="flex flex-row justify-between gap-4 items-center">
-            <ThemedText fontSize={14}>
-              HMmABQJibO
-              <ThemedText fontSize={14} fontWeight={800}>
-                9
-              </ThemedText>
-              qhSM
-            </ThemedText>
-            <Image
-              className="max-w-6 max-h-6"
-              source={require("@/assets/images/copy.png")}
-            />
-          </View>
-          <ThemedText fontSize={10} fontWeight={300}>
-            22/04/2024 09:58
-          </ThemedText>
-        </View>
+        <Spacer size={20} />
       </View>
     </View>
   );
