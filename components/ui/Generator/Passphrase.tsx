@@ -1,106 +1,182 @@
-import { Image, Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 
-import { ThemedText } from "@/components/ThemedText";
+import {
+  AddCircleIcon,
+  MinusCircleIcon,
+  ProgrammingArrowsIcon,
+} from "@/assets/images/icons";
+import { BIP39_WORDLISTS } from "@/assets/wordlists";
 import Spacer from "@/components/Spacer";
-import { useState } from "react";
-import { Switch } from "../Switch";
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedTextInput } from "@/components/ThemedTextInput";
+import ThemedTextWithBoldNumbers from "@/components/ThemedTextWithBoldNumbers";
+import { APP_CONSTANTS } from "@/constants/AppConstants";
+import { useAppState } from "@/contexts/AppStateProvider";
+import { useClipboard } from "@/lib/clipboard";
+import { useCallback, useEffect, useState } from "react";
+import { Button } from "../Button";
 import { Line } from "../Line";
+import { Switch } from "../Switch";
 
 export function GeneratorPassphrase() {
-  const [passphraseGeneratorStates, setPassphraseGeneratorStates] = useState({
-    wordsNumber: 15,
+  const MIN_WORDS = APP_CONSTANTS.MIN_WORDS;
+  const MAX_WORDS = APP_CONSTANTS.MAX_WORDS;
+
+  const [passphraseGeneratorStates, setPassphraseGeneratorStates] = useState<{
+    wordsNumber: number;
+    wordsSeparator: string;
+    capitalize: boolean;
+    includeNumber: boolean;
+  }>({
+    wordsNumber: APP_CONSTANTS.DEFAULT_WORDS_COUNT,
     wordsSeparator: "-",
     capitalize: false,
     includeNumber: false,
   });
+  const [passphrase, setPassphrase] = useState<string>("");
+
+  const { copyToClipboard } = useClipboard();
+  const { state, setState } = useAppState();
+
+  // Function to generate the passphrase
+  const generatePassphrase = useCallback(() => {
+    const words: string[] = [];
+
+    for (let i = 0; i < passphraseGeneratorStates.wordsNumber; i++) {
+      const randomIndex = Math.floor(Math.random() * BIP39_WORDLISTS.length);
+      let word = BIP39_WORDLISTS[randomIndex];
+
+      if (word && passphraseGeneratorStates.capitalize) {
+        word = word.charAt(0).toUpperCase() + word.slice(1);
+      }
+
+      if (word) {
+        words.push(word);
+      }
+    }
+
+    let generatedPassphrase = words.join(
+      passphraseGeneratorStates.wordsSeparator
+    );
+
+    if (passphraseGeneratorStates.includeNumber) {
+      const randomNumber = Math.floor(Math.random() * 10000)
+        .toString()
+        .padStart(4, "0");
+      generatedPassphrase += randomNumber;
+    }
+
+    setPassphrase(generatedPassphrase);
+  }, [passphraseGeneratorStates]);
+
+  const handleCopyPassphrase = useCallback(() => {
+    copyToClipboard(passphrase, "Passphrase");
+    setState({
+      ...state,
+      generatorData: [
+        ...state.generatorData,
+        {
+          text: passphrase,
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    });
+  }, [passphrase, copyToClipboard, setState, state]);
+
+  // Effect to generate passphrase whenever relevant states change
+  useEffect(() => {
+    generatePassphrase();
+  }, [generatePassphrase]);
 
   return (
-    <ScrollView className="flex-1 mx-6 my-5">
-      <View className="bg-[#EBEBEB] py-3 px-4 rounded-lg flex flex-row items-center justify-between gap-4">
-        <ThemedText fontSize={14}>
-          Jumble-Coil
-          <ThemedText fontSize={14} fontWeight={800}>
-            6
-          </ThemedText>
-          -Copier-Lend-Krypton-Reassure-Guileless-Unreached-Entomb-Extradite-Resample-Retying
-        </ThemedText>
-        <Image
-          className="max-w-4 max-h-4 -mt-1"
-          source={require("@/assets/images/programming-arrows.png")}
-        />
+    <ScrollView className="flex-1 px-6 py-5">
+      <View className="bg-[#EBEBEB] py-4 px-4 rounded-lg">
+        <View className="flex flex-row items-start gap-4">
+          <View className="flex-1">
+            <ThemedTextWithBoldNumbers text={passphrase} />
+          </View>
+          <Pressable onPress={generatePassphrase}>
+            <ProgrammingArrowsIcon width={20} height={20} />
+          </Pressable>
+        </View>
       </View>
 
       <Spacer size={8} />
 
-      <View className="rounded-full bg-black py-2">
-        <ThemedText
-          fontSize={14}
-          fontWeight={700}
-          className="text-white text-center"
-        >
-          Copy
-        </ThemedText>
-      </View>
+      <Button
+        text="Copy"
+        type="primary-rounded"
+        onPress={handleCopyPassphrase}
+      />
 
       <Spacer size={16} />
 
-      <View className="bg-[#EBEBEB] py-3 px-4 rounded-lg gap-2">
-        <View className="flex flex-row items-center justify-between">
-          <ThemedText fontSize={14}>Number of words</ThemedText>
+      <View className="bg-[#EBEBEB] py-4 px-4 rounded-lg gap-3">
+        <View className="flex flex-row items-center gap-4 justify-between">
+          <ThemedText fontSize={14}>Words</ThemedText>
           <View className="flex flex-row items-center gap-2">
-            {passphraseGeneratorStates.wordsNumber === 8 ? (
-              <Image
-                className="max-w-5 max-h-5"
-                source={require("@/assets/images/minus-circle-disabled.png")}
-              />
-            ) : (
-              <Pressable
-                onPress={() =>
-                  setPassphraseGeneratorStates({
-                    ...passphraseGeneratorStates,
-                    wordsNumber: passphraseGeneratorStates.wordsNumber - 1,
-                  })
+            <Pressable
+              disabled={passphraseGeneratorStates.wordsNumber <= MIN_WORDS}
+              onPress={() =>
+                setPassphraseGeneratorStates((prev) => ({
+                  ...prev,
+                  wordsNumber: Math.max(MIN_WORDS, prev.wordsNumber - 1),
+                }))
+              }
+            >
+              <MinusCircleIcon
+                width={24}
+                height={24}
+                color={
+                  passphraseGeneratorStates.wordsNumber <= MIN_WORDS
+                    ? "#BBBBBB"
+                    : "#000000"
                 }
-              >
-                <Image
-                  className="max-w-5 max-h-5"
-                  source={require("@/assets/images/minus-circle.png")}
-                />
-              </Pressable>
-            )}
-            <ThemedText fontSize={14} className="w-5 text-center">
+              />
+            </Pressable>
+            <ThemedText fontSize={14} className="w-6 text-center">
               {passphraseGeneratorStates.wordsNumber}
             </ThemedText>
-            {passphraseGeneratorStates.wordsNumber === 24 ? (
-              <Image
-                className="max-w-5 max-h-5"
-                source={require("@/assets/images/add-circle-disabled.png")}
-              />
-            ) : (
-              <Pressable
-                onPress={() =>
-                  setPassphraseGeneratorStates({
-                    ...passphraseGeneratorStates,
-                    wordsNumber: passphraseGeneratorStates.wordsNumber + 1,
-                  })
+            <Pressable
+              disabled={passphraseGeneratorStates.wordsNumber >= MAX_WORDS}
+              onPress={() =>
+                setPassphraseGeneratorStates((prev) => ({
+                  ...prev,
+                  wordsNumber: Math.min(MAX_WORDS, prev.wordsNumber + 1),
+                }))
+              }
+            >
+              <AddCircleIcon
+                width={24}
+                height={24}
+                color={
+                  passphraseGeneratorStates.wordsNumber >= MAX_WORDS
+                    ? "#BBBBBB"
+                    : "#000000"
                 }
-              >
-                <Image
-                  className="max-w-5 max-h-5"
-                  source={require("@/assets/images/add-circle.png")}
-                />
-              </Pressable>
-            )}
+              />
+            </Pressable>
           </View>
         </View>
 
         <Line />
 
-        <View className="flex">
+        <View>
           <ThemedText fontSize={12} fontWeight={800}>
-            Word separator
+            Separator
           </ThemedText>
-          <ThemedText fontSize={14}>-</ThemedText>
+          <ThemedTextInput
+            value={passphraseGeneratorStates.wordsSeparator}
+            onChangeText={(text) =>
+              setPassphraseGeneratorStates((prev) => ({
+                ...prev,
+                wordsSeparator: text || "-",
+              }))
+            }
+            className="w-16 outline-none"
+            fontSize={14}
+            placeholder="-"
+          />
         </View>
 
         <Line />
@@ -110,10 +186,10 @@ export function GeneratorPassphrase() {
           <Switch
             state={passphraseGeneratorStates.capitalize}
             callback={() =>
-              setPassphraseGeneratorStates({
-                ...passphraseGeneratorStates,
-                capitalize: !passphraseGeneratorStates.capitalize,
-              })
+              setPassphraseGeneratorStates((prev) => ({
+                ...prev,
+                capitalize: !prev.capitalize,
+              }))
             }
           />
         </View>
@@ -125,14 +201,18 @@ export function GeneratorPassphrase() {
           <Switch
             state={passphraseGeneratorStates.includeNumber}
             callback={() =>
-              setPassphraseGeneratorStates({
-                ...passphraseGeneratorStates,
-                includeNumber: !passphraseGeneratorStates.includeNumber,
-              })
+              setPassphraseGeneratorStates((prev) => ({
+                ...prev,
+                includeNumber: !prev.includeNumber,
+              }))
             }
           />
         </View>
       </View>
+
+      <Spacer size={16} />
+
+      <Spacer size={32} />
     </ScrollView>
   );
 }
