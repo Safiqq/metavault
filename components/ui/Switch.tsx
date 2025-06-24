@@ -8,11 +8,11 @@ interface SwitchProps {
 export const Switch: React.FC<SwitchProps> = ({ state, callback }) => {
   return (
     <Pressable
-      className={`w-8 h-4 rounded-full ${state ? "bg-black" : "bg-[#BBBBBB]"}`}
+      className={`w-10 h-5 rounded-full ${state ? "bg-black" : "bg-[#BBBBBB]"}`}
       onPress={callback}
     >
       <View
-        className={`w-3 h-3 rounded-full absolute top-0.5 bg-white ${
+        className={`w-4 h-4 rounded-full absolute top-0.5 bg-white ${
           state ? "right-0.5" : "left-0.5"
         }`}
       ></View>
