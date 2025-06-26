@@ -18,6 +18,12 @@ interface DropdownMenuProps {
   maxHeight?: number;
 }
 
+interface Position {
+  x: number;
+  y: number;
+  width: number;
+}
+
 export const DropdownMenu: React.FC<DropdownMenuProps> = ({
   visible,
   handleOpen,
@@ -29,7 +35,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
   maxHeight = 250,
 }) => {
   const triggerRef = useRef<View>(null);
-  const [position, setPosition] = useState({ x: 0, y: 0, width: 0 });
+  const [position, setPosition] = useState<Position>({ x: 0, y: 0, width: 0 });
 
   useEffect(() => {
     if (triggerRef.current && visible) {
@@ -38,7 +44,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
         const spaceBelow = screenHeight - (py + height);
         const adjustedY =
           spaceBelow < maxHeight && py > maxHeight
-            ? py - maxHeight // Show above if not enough space below
+            ? py - height // Show above if not enough space below
             : py + height; // Show below normally
 
         setPosition({
@@ -70,9 +76,9 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
                 style={{
                   top: position.y,
                   left:
-                    pos == "center"
+                    pos === "center"
                       ? position.x + position.width / 2 - dropdownWidth / 2
-                      : pos == "right"
+                      : pos === "right"
                       ? position.x + position.width - dropdownWidth
                       : position.x - position.width + dropdownWidth,
                   width: dropdownWidth,
@@ -83,7 +89,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
                   showsVerticalScrollIndicator={true}
                   nestedScrollEnabled={true}
                 >
-                  {children}
+                  <View className="gap-2">{children}</View>
                 </ScrollView>
               </View>
             </View>

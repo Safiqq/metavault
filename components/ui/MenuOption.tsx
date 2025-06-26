@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { TouchableOpacity, StyleSheet } from "react-native";
+import { TouchableOpacity } from "react-native";
 
 export const MenuOption = ({
   onSelect,
