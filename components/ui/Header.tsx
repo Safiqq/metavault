@@ -1,9 +1,9 @@
-import { View, Pressable } from "react-native";
-import { ThemedText } from "../ThemedText";
-import { Image } from "react-native";
+import { ArrowLeftIcon, SearchNormalIcon } from "@/assets/images/icons";
 import { useRouter } from "expo-router";
 import React from "react";
+import { Pressable, View } from "react-native";
 import Spacer from "../Spacer";
+import { ThemedText } from "../ThemedText";
 import { ThemedTextInput } from "../ThemedTextInput";
 
 interface HeaderProps {
@@ -40,16 +40,11 @@ export const Header: React.FC<HeaderProps> = ({
                 }
               }}
             >
-              {leftButtonBackImage && (
-                <Image
-                  className="max-w-6 max-h-6"
-                  source={require("@/assets/images/arrow-left.png")}
-                />
-              )}
+              {leftButtonBackImage && <ArrowLeftIcon width={16} height={16} />}
               <ThemedText
-                fontSize={10}
+                fontSize={12}
                 fontWeight={600}
-                className="text-[#0099FF] -ml-1"
+                className="text-[#0099FF]"
               >
                 {leftButtonText}
               </ThemedText>
@@ -84,17 +79,13 @@ export const Header: React.FC<HeaderProps> = ({
           <Spacer size={16} />
 
           <View className="bg-[#EBEBEB] rounded-xl flex flex-row items-center gap-3 py-2 px-3">
-            <Image
-              className="max-w-4 max-h-4"
-              source={require("@/assets/images/search-normal.png")}
-            />
+            <SearchNormalIcon width={16} height={16} />
             <ThemedTextInput
               fontSize={14}
               className="flex-1 outline-none"
               placeholder="Search"
               value={searchText}
               onChangeText={onSearchTextChange}
-              autoFocus
             />
           </View>
         </>
