@@ -1,7 +1,5 @@
-import React from "react";
-
+import React, { forwardRef } from "react";
 import { TextInput, TextInputProps } from "react-native";
-import { forwardRef } from "react";
 
 interface ThemedTextInputProps extends TextInputProps {
   fontWeight?: 200 | 300 | 400 | 500 | 600 | 700 | 800;
@@ -10,46 +8,64 @@ interface ThemedTextInputProps extends TextInputProps {
   paddingVertical?: number;
 }
 
-export const ThemedTextInput = forwardRef((props: ThemedTextInputProps, ref) => {
-  let fontSize = props.fontSize ?? 16;
-  let paddingVertical = props.paddingVertical ?? 6;
+// Font family mapping for better maintainability
+const FONT_FAMILY_MAP = {
+  normal: {
+    200: "PlusJakartaSans_200ExtraLight",
+    300: "PlusJakartaSans_300Light",
+    400: "PlusJakartaSans_400Regular",
+    500: "PlusJakartaSans_500Medium",
+    600: "PlusJakartaSans_600SemiBold",
+    700: "PlusJakartaSans_700Bold",
+    800: "PlusJakartaSans_800ExtraBold",
+  },
+  italic: {
+    200: "PlusJakartaSans_200ExtraLight_Italic",
+    300: "PlusJakartaSans_300Light_Italic",
+    400: "PlusJakartaSans_400Regular_Italic",
+    500: "PlusJakartaSans_500Medium_Italic",
+    600: "PlusJakartaSans_600SemiBold_Italic",
+    700: "PlusJakartaSans_700Bold_Italic",
+    800: "PlusJakartaSans_800ExtraBold_Italic",
+  },
+} as const;
 
-  let fontFamily = "";
-  let fontWeight = props.fontWeight ?? 400;
-  let fontStyle = props.fontStyle ?? "normal";
+const getFontFamily = (
+  fontWeight: ThemedTextInputProps["fontWeight"] = 400,
+  fontStyle: ThemedTextInputProps["fontStyle"] = "normal"
+): string => {
+  return FONT_FAMILY_MAP[fontStyle][fontWeight];
+};
 
-  if (fontStyle == "italic") {
-    if (fontWeight == 200) fontFamily = "PlusJakartaSans_200ExtraLight_Italic";
-    else if (fontWeight == 300) fontFamily = "PlusJakartaSans_300Light_Italic";
-    else if (fontWeight == 400)
-      fontFamily = "PlusJakartaSans_400Regular_Italic";
-    else if (fontWeight == 500) fontFamily = "PlusJakartaSans_500Medium_Italic";
-    else if (fontWeight == 600)
-      fontFamily = "PlusJakartaSans_600SemiBold_Italic";
-    else if (fontWeight == 700) fontFamily = "PlusJakartaSans_700Bold_Italic";
-    else if (fontWeight == 800)
-      fontFamily = "PlusJakartaSans_800ExtraBold_Italic";
-  } else {
-    if (fontWeight == 200) fontFamily = "PlusJakartaSans_200ExtraLight";
-    else if (fontWeight == 300) fontFamily = "PlusJakartaSans_300Light";
-    else if (fontWeight == 400) fontFamily = "PlusJakartaSans_400Regular";
-    else if (fontWeight == 500) fontFamily = "PlusJakartaSans_500Medium";
-    else if (fontWeight == 600) fontFamily = "PlusJakartaSans_600SemiBold";
-    else if (fontWeight == 700) fontFamily = "PlusJakartaSans_700Bold";
-    else if (fontWeight == 800) fontFamily = "PlusJakartaSans_800ExtraBold";
+export const ThemedTextInput = forwardRef<TextInput, ThemedTextInputProps>(
+  (props, ref) => {
+    const {
+      fontWeight = 400,
+      fontStyle = "normal",
+      fontSize = 16,
+      paddingVertical = 6,
+      style,
+      ...restProps
+    } = props;
+
+    const fontFamily = getFontFamily(fontWeight, fontStyle);
+
+    return (
+      <TextInput
+        ref={ref}
+        style={[
+          {
+            fontSize,
+            paddingVertical,
+            fontFamily,
+          },
+          style,
+        ]}
+        placeholderTextColor="#999999"
+        {...restProps}
+      />
+    );
   }
+);
 
-  return (
-    <TextInput
-      {...props}
-      style={[
-        props.style,
-        {
-          fontSize,
-          paddingVertical,
-          fontFamily,
-        },
-      ]}
-    />
-  );
-});
+ThemedTextInput.displayName = "ThemedTextInput";
