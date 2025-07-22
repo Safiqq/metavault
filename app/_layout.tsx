@@ -1,5 +1,34 @@
 import {
+  PlusJakartaSans_200ExtraLight,
+  PlusJakartaSans_200ExtraLight_Italic,
+  PlusJakartaSans_300Light,
+  PlusJakartaSans_300Light_Italic,
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_400Regular_Italic,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_500Medium_Italic,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_600SemiBold_Italic,
+  PlusJakartaSans_700Bold,
+  PlusJakartaSans_700Bold_Italic,
+  PlusJakartaSans_800ExtraBold,
+  PlusJakartaSans_800ExtraBold_Italic,
   useFonts,
+} from "@expo-google-fonts/plus-jakarta-sans";
+import { DefaultTheme, ThemeProvider } from "@react-navigation/native";
+import { SplashScreen, Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import React, { useCallback, useEffect } from "react";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import "../global.css";
+
+import { AlertProvider } from "@/contexts/AlertProvider";
+import { AppStateProvider } from "@/contexts/AppStateProvider";
+import { AuthProvider } from "@/contexts/AuthProvider";
+
+// Root layout for the app. Handles font loading, splash screen, and wraps the app in all necessary providers.
+// Font configuration for better maintainability
+const FONT_CONFIG = {
   PlusJakartaSans_200ExtraLight,
   PlusJakartaSans_300Light,
   PlusJakartaSans_400Regular,
@@ -14,88 +43,51 @@ import {
   PlusJakartaSans_600SemiBold_Italic,
   PlusJakartaSans_700Bold_Italic,
   PlusJakartaSans_800ExtraBold_Italic,
-} from "@expo-google-fonts/plus-jakarta-sans";
-import { DefaultTheme, ThemeProvider } from "@react-navigation/native";
-import { Stack } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
-import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
-import "../global.css";
-import { MnemonicSetupProvider } from "@/contexts/MnemonicSetupContext";
-import { AuthenticationSetupProvider } from "@/contexts/AuthenticationSetupContext";
-import { AlertProvider } from "@/contexts/AlertContext";
+} as const;
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+// Stack screen options for consistency
+const STACK_SCREEN_OPTIONS = {
+  headerShown: false,
+  contentStyle: { backgroundColor: "white" },
+} as const;
 
-export default function RootLayout() {
-  let [fontsLoaded] = useFonts({
-    PlusJakartaSans_200ExtraLight,
-    PlusJakartaSans_300Light,
-    PlusJakartaSans_400Regular,
-    PlusJakartaSans_500Medium,
-    PlusJakartaSans_600SemiBold,
-    PlusJakartaSans_700Bold,
-    PlusJakartaSans_800ExtraBold,
-    PlusJakartaSans_200ExtraLight_Italic,
-    PlusJakartaSans_300Light_Italic,
-    PlusJakartaSans_400Regular_Italic,
-    PlusJakartaSans_500Medium_Italic,
-    PlusJakartaSans_600SemiBold_Italic,
-    PlusJakartaSans_700Bold_Italic,
-    PlusJakartaSans_800ExtraBold_Italic,
-  });
+export default function RootLayout(): React.JSX.Element | null {
+  // Load all custom fonts before rendering the app
+  const [fontsLoaded, fontError] = useFonts(FONT_CONFIG);
+
+  // Hide the splash screen once fonts are loaded or if there's a font loading error
+  const handleSplashScreen = useCallback(async () => {
+    if (fontsLoaded || fontError) {
+      try {
+        await SplashScreen.hideAsync();
+      } catch (error) {
+        console.warn("Failed to hide splash screen:", error);
+      }
+    }
+  }, [fontsLoaded, fontError]);
 
   useEffect(() => {
-    if (fontsLoaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded]);
+    handleSplashScreen();
+  }, [handleSplashScreen]);
 
-  if (!fontsLoaded) {
+  // Don't render the app UI until fonts are ready or errored
+  if (!fontsLoaded && !fontError) {
     return null;
   }
 
+  // App provider tree: SafeArea > Theme > Auth > AppState > Alert > Main Stack
   return (
-    <ThemeProvider value={DefaultTheme}>
-      <AlertProvider>
-        <AuthenticationSetupProvider>
-          <MnemonicSetupProvider>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: "white" },
-              }}
-            >
-              {/* Authentication screens with AuthenticationSetupProvider */}
-              <Stack.Screen name="authentication/faceauthentication" />
-              <Stack.Screen name="authentication/fingerprint" />
-              {/* <Stack.Screen name="authentication/sqrl" /> */}
-
-              <Stack.Screen name="settings/accountsecurity" />
-              <Stack.Screen name="settings/other" />
-              <Stack.Screen name="settings/vault" />
-
-              {/* Main app screens */}
-              <Stack.Screen name="confirmsrp" />
-              <Stack.Screen name="createaccount" />
-              <Stack.Screen name="folders" />
-              <Stack.Screen name="(tabs)/generator" />
-              <Stack.Screen name="index" />
-              <Stack.Screen name="locked" />
-              <Stack.Screen name="(tabs)/myvault" />
-              <Stack.Screen name="securevault" />
-              <Stack.Screen name="securevault2" />
-              <Stack.Screen name="(tabs)/settings" />
-              <Stack.Screen name="srp" />
-              <Stack.Screen name="verifysrp" />
-
-              <Stack.Screen name="+not-found" />
-            </Stack>
-            <StatusBar style="auto" />
-          </MnemonicSetupProvider>
-        </AuthenticationSetupProvider>
-      </AlertProvider>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider value={DefaultTheme}>
+        <AuthProvider>
+          <AppStateProvider>
+            <AlertProvider>
+              <Stack screenOptions={STACK_SCREEN_OPTIONS} />
+              <StatusBar style="auto" />
+            </AlertProvider>
+          </AppStateProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
