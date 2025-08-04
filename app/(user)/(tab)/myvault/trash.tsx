@@ -4,16 +4,15 @@ import { ThemedText } from "@/components/ThemedText";
 import { DropdownMenu } from "@/components/ui/DropdownMenu";
 import { Header } from "@/components/ui/Header";
 import { MenuOption } from "@/components/ui/MenuOption";
-import { AddCredential } from "@/components/ui/Modal/AddCredential";
-import { AddItem } from "@/components/ui/Modal/AddItem";
-import { EditCredential } from "@/components/ui/Modal/EditCredential";
-import { ViewCredential } from "@/components/ui/Modal/ViewCredential";
+import { AddCredentialModal } from "@/components/ui/Modal/AddCredentialModal";
+import { AddItemModal } from "@/components/ui/Modal/AddItemModal";
+import { EditCredentialModal } from "@/components/ui/Modal/EditCredentialModal";
+import { ViewCredentialModal } from "@/components/ui/Modal/ViewCredentialModal";
+import { FullScreenLoadingOverlay } from "@/components/ui/FullScreenLoadingOverlay";
 import { useAlert } from "@/contexts/AlertProvider";
-import { useAppState } from "@/contexts/AppStateProvider";
-import { decryptVault, deriveKeys, mnemonicToSeed } from "@/lib/bip39";
 import { useClipboard } from "@/lib/clipboard";
-import { supabase } from "@/lib/supabase";
-import { DecryptedLoginItem, DecryptedSSHKeyItem } from "@/lib/types";
+import { DecryptedVaultItem } from "@/lib/types";
+import { vaultManager } from "@/lib/vaultManager";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   Platform,
@@ -25,6 +24,7 @@ import {
 import ReactNativeModal from "react-native-modal";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Line } from "react-native-svg";
+import { ROUTES } from "@/constants/AppConstants";
 
 export default function MyVaultTrashScreen() {
   const insets = useSafeAreaInsets();
@@ -36,94 +36,62 @@ export default function MyVaultTrashScreen() {
     "login" | "ssh_key"
   >("login");
 
-  const [vaultData, setVaultData] = useState<
-    (DecryptedLoginItem | DecryptedSSHKeyItem)[]
-  >([]);
+  const [vaultData, setVaultData] = useState<DecryptedVaultItem[]>([]);
   const [searchText, setSearchText] = useState<string>("");
   const [dropdownVisible, setDropdownVisible] = useState<{
     [key: string]: boolean;
   }>({});
 
-  const [filteredItems, setFilteredItems] = useState<
-    (DecryptedLoginItem | DecryptedSSHKeyItem)[]
-  >([]);
+  const [filteredItems, setFilteredItems] = useState<DecryptedVaultItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const [selectedItem, setSelectedItem] = useState<
-    DecryptedLoginItem | DecryptedSSHKeyItem
-  >();
+  const [selectedItem, setSelectedItem] = useState<DecryptedVaultItem>();
   const [viewCredentialVisible, setViewCredentialVisible] =
     useState<boolean>(false);
   const [editCredentialVisible, setEditCredentialVisible] =
     useState<boolean>(false);
 
   const { showAlert } = useAlert();
-  const { state } = useAppState();
   const { copyToClipboard } = useClipboard();
 
   const fetchVaultItems = useCallback(async () => {
     try {
       setIsLoading(true);
 
-      const { data: loginsData, error: loginsError } = await supabase
-        .from("logins")
-        .select()
-        .not("deleted_at", "is", null);
-      if (loginsError) return;
+      // Use vaultManager to get deleted/trashed items
+      const trashedItems = vaultManager.getTrashedItems();
+      if (!trashedItems || trashedItems.length === 0) {
+        setVaultData([]);
+        return;
+      }
 
-      const { data: sshKeysData, error: sshKeysError } = await supabase
-        .from("ssh_keys")
-        .select()
-        .not("deleted_at", "is", null);
-      if (sshKeysError) return;
-
-      const data = [...loginsData, ...sshKeysData];
-
-      const decryptedAndParsedData = await Promise.all(
-        data.map(async (item) => {
-          if (item.encrypted_payload) {
-            if (!state.mnemonic) return;
-
-            const seed = await mnemonicToSeed(state.mnemonic);
-            const derivedKeys = await deriveKeys(seed);
-            const decryptedString = await decryptVault(
-              item.encrypted_payload,
-              derivedKeys
-            );
-            const parsedPayload = JSON.parse(decryptedString);
-
-            if ("username" in parsedPayload) {
-              const loginItem: DecryptedLoginItem = {
-                ...item,
-                item_name: parsedPayload.item_name,
-                username: parsedPayload.username,
-                password: parsedPayload.password,
-                website: parsedPayload.website,
-              };
-              return loginItem;
-            } else if ("public_key" in parsedPayload) {
-              const sshKeyItem: DecryptedSSHKeyItem = {
-                ...item,
-                item_name: parsedPayload.item_name,
-                public_key: parsedPayload.public_key,
-                private_key: parsedPayload.private_key,
-              };
-              return sshKeyItem;
-            }
-          }
-          return item;
+      // Transform CredentialItem to DecryptedVaultItem format
+      const transformedData: DecryptedVaultItem[] = trashedItems.map(
+        (item) => ({
+          id: item.id,
+          folder_id: item.folder_id,
+          folder_name: item.folder_name,
+          item_name: item.item_name,
+          item_type: item.item_type,
+          username: item.username,
+          password: item.password,
+          public_key: item.public_key,
+          private_key: item.private_key,
+          fingerprint: item.fingerprint,
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+          deleted_at: item.deleted_at,
         })
       );
-      setVaultData(
-        decryptedAndParsedData as (DecryptedLoginItem | DecryptedSSHKeyItem)[]
-      );
+
+      setVaultData(transformedData);
     } catch (err) {
       console.error("Failed to load vault items:", err);
       showAlert("Error", "Failed to load vault items. Please try again.");
     } finally {
       setIsLoading(false);
     }
-  }, [showAlert, state.mnemonic]);
+  }, [showAlert]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -139,7 +107,6 @@ export default function MyVaultTrashScreen() {
   useEffect(() => {
     const lowercasedSearchText = searchText.toLowerCase();
     const filtered = vaultData.filter((item) => {
-      // 'item' is now correctly typed
       if (
         item.item_name &&
         item.item_name.toLowerCase().includes(lowercasedSearchText)
@@ -148,21 +115,12 @@ export default function MyVaultTrashScreen() {
       }
       // Check for type-specific properties
       if (
-        "username" in item &&
         item.username &&
         item.username.toLowerCase().includes(lowercasedSearchText)
       ) {
         return true;
       }
       if (
-        "website" in item &&
-        item.website &&
-        item.website.toLowerCase().includes(lowercasedSearchText)
-      ) {
-        return true;
-      }
-      if (
-        "public_key" in item &&
         item.public_key &&
         item.public_key.toLowerCase().includes(lowercasedSearchText)
       ) {
@@ -198,14 +156,8 @@ export default function MyVaultTrashScreen() {
           try {
             if (!selectedItem) return;
 
-            const { error } = await supabase
-              .from("username" in selectedItem ? "logins" : "ssh_keys")
-              .delete()
-              .eq("id", itemId);
-
-            if (error) {
-              throw new Error("Failed to delete item from database.");
-            }
+            // Permanently delete via vaultManager
+            await vaultManager.permanentlyDeleteVaultItem(itemId);
 
             setVaultData((prevVaultData) =>
               prevVaultData.filter((item) => item.id !== itemId)
@@ -224,6 +176,10 @@ export default function MyVaultTrashScreen() {
     <Pressable
       key={item.id}
       className="flex flex-row items-center justify-between"
+      onPress={() => {
+        setViewCredentialVisible(true);
+        setSelectedItem(item);
+      }}
     >
       <View className="flex-1">
         <ThemedText fontSize={14}>{item.item_name}</ThemedText>
@@ -262,7 +218,7 @@ export default function MyVaultTrashScreen() {
 
         <MenuOption
           onSelect={async () => {
-            await copyToClipboard(item.username, "Username"); // Use item.username directly
+            await copyToClipboard(item.username);
             closeDropdown(item.id);
           }}
         >
@@ -273,7 +229,7 @@ export default function MyVaultTrashScreen() {
 
         <MenuOption
           onSelect={async () => {
-            await copyToClipboard(item.password, "Password"); // Use item.password directly
+            await copyToClipboard(item.password);
             closeDropdown(item.id);
           }}
         >
@@ -296,10 +252,6 @@ export default function MyVaultTrashScreen() {
     </Pressable>
   );
 
-  if (isLoading) {
-    return <View />;
-  }
-
   return (
     <View
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
@@ -316,7 +268,7 @@ export default function MyVaultTrashScreen() {
         animationInTiming={300}
         animationOutTiming={300}
       >
-        <AddCredential
+        <AddCredentialModal
           itemType={addCredentialType}
           onClose={() => setAddCredentialVisible(false)}
           onRefresh={async () => await fetchVaultItems()}
@@ -334,8 +286,8 @@ export default function MyVaultTrashScreen() {
             animationInTiming={300}
             animationOutTiming={300}
           >
-            <ViewCredential
-              itemType={"username" in selectedItem ? "login" : "ssh_key"}
+            <ViewCredentialModal
+              itemType={selectedItem.username ? "login" : "ssh_key"}
               onClose={() => setViewCredentialVisible(false)}
               onEdit={() => {
                 setViewCredentialVisible(false);
@@ -354,8 +306,8 @@ export default function MyVaultTrashScreen() {
             animationInTiming={300}
             animationOutTiming={300}
           >
-            <EditCredential
-              itemType={"username" in selectedItem ? "login" : "ssh_key"}
+            <EditCredentialModal
+              itemType={selectedItem.username ? "login" : "ssh_key"}
               onClose={() => setEditCredentialVisible(false)}
               onRefresh={async () => await fetchVaultItems()}
               item={selectedItem}
@@ -368,6 +320,7 @@ export default function MyVaultTrashScreen() {
         titleText="Trash"
         leftButtonText="My Vault"
         leftButtonBackImage={true}
+        leftButtonTarget={ROUTES.USER.MY_VAULT.INDEX}
         searchText={searchText}
         onSearchTextChange={setSearchText}
       />
@@ -383,20 +336,17 @@ export default function MyVaultTrashScreen() {
         }
       >
         <ThemedText fontSize={12} fontWeight={800}>
-          ITEMS ({isLoading ? "..." : filteredItems.length})
+          ITEMS ({filteredItems.length})
         </ThemedText>
 
         <Spacer size={4} />
 
-        {isLoading ? (
+        {filteredItems.length === 0 ? (
           <View className="bg-[#EBEBEB] py-4 px-4 rounded-lg items-center">
-            <ThemedText fontSize={14} className="text-gray-600 text-center py-2">
-              Loading items...
-            </ThemedText>
-          </View>
-        ) : filteredItems.length === 0 ? (
-          <View className="bg-[#EBEBEB] py-4 px-4 rounded-lg items-center">
-            <ThemedText fontSize={14} className="text-gray-600 text-center py-2">
+            <ThemedText
+              fontSize={14}
+              className="text-gray-600 text-center py-2"
+            >
               {searchText
                 ? "No items match your search."
                 : "No items in this type."}
@@ -416,7 +366,7 @@ export default function MyVaultTrashScreen() {
         <Spacer size={80} />
       </ScrollView>
       <View className="absolute bottom-0 right-0 px-12 pb-8">
-        <AddItem
+        <AddItemModal
           dropdownVisible={dropdownVisible["add_item"] || false}
           callback={(e) => {
             if (e === "login" || e === "ssh_key") {
@@ -427,6 +377,11 @@ export default function MyVaultTrashScreen() {
           onlyCredential
         />
       </View>
+
+      <FullScreenLoadingOverlay
+        visible={isLoading}
+        text="Loading trash items..."
+      />
     </View>
   );
 }

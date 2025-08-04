@@ -7,18 +7,18 @@ import { Button } from "@/components/ui/Button";
 import { DropdownMenu } from "@/components/ui/DropdownMenu";
 import { Line } from "@/components/ui/Line";
 import { MenuOption } from "@/components/ui/MenuOption";
-import { ViewPasskey } from "@/components/ui/Modal/ViewPasskeys";
-import { SecurityQuiz } from "@/components/ui/Modal/SecurityQuiz";
-import { SeedPhrase } from "@/components/ui/Modal/SeedPhrase";
-import { Sessions } from "@/components/ui/Modal/Sessions";
-import { VerifySeedPhrase } from "@/components/ui/Modal/VerifySeedPhrase";
-import { APP_CONSTANTS, ROUTES } from "@/constants/AppConstants";
+import { ViewPasskeyModal } from "@/components/ui/Modal/ViewPasskeyModal";
+import { SecurityQuizModal } from "@/components/ui/Modal/SecurityQuizModal";
+import { SeedPhraseModal } from "@/components/ui/Modal/SeedPhraseModal";
+import { SessionModal } from "@/components/ui/Modal/SessionModal";
+import { VerifySeedPhraseModal } from "@/components/ui/Modal/VerifySeedPhraseModal";
+import { ROUTES } from "@/constants/AppConstants";
 import { useAlert } from "@/contexts/AlertProvider";
-import { defaultState, useAppState } from "@/contexts/AppStateProvider";
+import { useAppState } from "@/contexts/AppStateProvider";
 import { useAuth } from "@/contexts/AuthProvider";
 import { webStorage } from "@/lib/largeSecureStore";
 import { supabase } from "@/lib/supabase";
-import { APP_STATES } from "@/lib/types";
+import { AUTH_L_STATES, AUTH_NL_STATES, AUTH_STATES } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import * as Crypto from "expo-crypto";
 import * as Device from "expo-device";
@@ -35,15 +35,16 @@ export default function AccountSecurityScreen() {
   const { user } = useAuth();
   const { showAlert } = useAlert();
 
-  const [securityQuizVisible, setSecurityQuizVisible] =
+  const [securityQuizModalVisible, setSecurityQuizModalVisible] =
     useState<boolean>(false);
-  const [verifySeedPhraseVisible, setVerifySeedPhraseVisible] =
+  const [verifySeedPhraseModalVisible, setVerifySeedPhraseModalVisible] =
     useState<boolean>(
-      state.currentState === APP_STATES.LOGGED_IN_NEED_SEED_PHRASE_VERIFICATION
+      state.currentState === AUTH_L_STATES.NEED_SEED_PHRASE_VERIFICATION
     );
   const [passkeysVisible, setPasskeysVisible] = useState<boolean>(false);
   const [sessionsVisible, setSessionsVisible] = useState<boolean>(false);
-  const [seedPhraseVisible, setSeedPhraseVisible] = useState<boolean>(false);
+  const [seedPhraseModalVisible, setSeedPhraseModalVisible] =
+    useState<boolean>(false);
 
   const [askMnemonicVisible, setAskMnemonicVisible] = useState<boolean>(false);
   const [sessionTimeoutVisible, setSessionTimeoutVisible] =
@@ -67,11 +68,29 @@ export default function AccountSecurityScreen() {
   const handleLockNow = async () => {
     setState({
       ...state,
-      currentState: APP_STATES.LOGGED_IN_NEED_SESSION_RENEWAL,
+      currentState: AUTH_L_STATES.NEED_SESSION_RENEWAL,
     });
-    router.replace(ROUTES.USER.SETTINGS);
-    router.dismissAll();
+    router.push(ROUTES.USER.LOCKED);
   };
+
+  useEffect(() => {
+    const logOut = async () => {
+      try {
+        await supabase.auth.signOut();
+      } catch {
+      } finally {
+        router.push(ROUTES.ROOT);
+      }
+    };
+
+    if (
+      state.authState === AUTH_STATES.NOT_LOGGED_IN &&
+      state.currentState === AUTH_NL_STATES.NEED_CLEAR_STATE_AS_SIGNED_OUT
+    ) {
+      console.log("authstate is nl and currenstate is nclaso");
+      logOut();
+    }
+  }, [state.authState, state.currentState]);
 
   // Handles user logout and session revocation
   const handleLogOut = async () => {
@@ -80,6 +99,11 @@ export default function AccountSecurityScreen() {
       {
         text: "OK",
         onPress: async () => {
+          setState({
+            ...state,
+            authState: AUTH_STATES.NOT_LOGGED_IN,
+            currentState: AUTH_NL_STATES.NEED_CLEAR_STATE_AS_SIGNED_OUT,
+          });
           const { error: revokeError } = await supabase
             .from("sessions")
             .update({
@@ -90,12 +114,6 @@ export default function AccountSecurityScreen() {
           if (revokeError) {
             console.error("Failed to revoke session:", revokeError);
           }
-
-          await supabase.auth.signOut();
-          setState(defaultState);
-
-          router.replace(ROUTES.ROOT);
-          router.dismissAll();
         },
       },
     ]);
@@ -105,7 +123,6 @@ export default function AccountSecurityScreen() {
     <View
       style={{
         paddingTop: insets.top,
-        paddingBottom: insets.bottom,
         backgroundColor: "white",
       }}
       className={`flex-1 w-full ${
@@ -113,64 +130,62 @@ export default function AccountSecurityScreen() {
       }`}
     >
       <ReactNativeModal
-        isVisible={securityQuizVisible}
+        isVisible={securityQuizModalVisible}
         onSwipeComplete={async () => {
-          setSecurityQuizVisible(false);
+          setSecurityQuizModalVisible(false);
         }}
         swipeDirection={["down"]}
         onBackdropPress={async () => {
-          setSecurityQuizVisible(false);
+          setSecurityQuizModalVisible(false);
         }}
         style={{ margin: 0 }}
         animationInTiming={300}
         animationOutTiming={300}
       >
-        <SecurityQuiz
-          onClose={() => setSecurityQuizVisible(false)}
-          onContinue={() => setSeedPhraseVisible(true)}
+        <SecurityQuizModal
+          onClose={() => setSecurityQuizModalVisible(false)}
+          onContinue={() => setSeedPhraseModalVisible(true)}
         />
       </ReactNativeModal>
 
       <ReactNativeModal
-        isVisible={seedPhraseVisible}
+        isVisible={seedPhraseModalVisible}
         onSwipeComplete={async () => {
-          setSeedPhraseVisible(false);
+          setSeedPhraseModalVisible(false);
         }}
         swipeDirection={["down"]}
         onBackdropPress={async () => {
-          setSeedPhraseVisible(false);
+          setSeedPhraseModalVisible(false);
         }}
         style={{ margin: 0 }}
         animationInTiming={300}
         animationOutTiming={300}
       >
-        <SeedPhrase onClose={() => setSeedPhraseVisible(false)} />
+        <SeedPhraseModal onClose={() => setSeedPhraseModalVisible(false)} />
       </ReactNativeModal>
 
       <ReactNativeModal
-        isVisible={verifySeedPhraseVisible}
+        isVisible={verifySeedPhraseModalVisible}
         onSwipeComplete={() => {
           if (
-            state.currentState !==
-            APP_STATES.LOGGED_IN_NEED_SEED_PHRASE_VERIFICATION
+            state.currentState !== AUTH_L_STATES.NEED_SEED_PHRASE_VERIFICATION
           )
-            setVerifySeedPhraseVisible(false);
+            setVerifySeedPhraseModalVisible(false);
         }}
         swipeDirection={["down"]}
         onBackdropPress={() => {
           if (
-            state.currentState !==
-            APP_STATES.LOGGED_IN_NEED_SEED_PHRASE_VERIFICATION
+            state.currentState !== AUTH_L_STATES.NEED_SEED_PHRASE_VERIFICATION
           )
-            setVerifySeedPhraseVisible(false);
+            setVerifySeedPhraseModalVisible(false);
         }}
         style={{ margin: 0 }}
         animationInTiming={300}
         animationOutTiming={300}
       >
-        <VerifySeedPhrase
+        <VerifySeedPhraseModal
           onClose={() => {
-            setVerifySeedPhraseVisible(false);
+            setVerifySeedPhraseModalVisible(false);
             setState({
               ...state,
               lastMnemonicVerification: new Date().toISOString(),
@@ -192,7 +207,7 @@ export default function AccountSecurityScreen() {
         animationInTiming={300}
         animationOutTiming={300}
       >
-        <ViewPasskey onClose={() => setPasskeysVisible(false)} />
+        <ViewPasskeyModal onClose={() => setPasskeysVisible(false)} />
       </ReactNativeModal>
 
       <ReactNativeModal
@@ -208,10 +223,10 @@ export default function AccountSecurityScreen() {
         animationInTiming={300}
         animationOutTiming={300}
       >
-        <Sessions onClose={() => setSessionsVisible(false)} />
+        <SessionModal onClose={() => setSessionsVisible(false)} />
       </ReactNativeModal>
 
-      <View className="p-6 pb-5 border-b border-[#EBEBEB]">
+      <View className="p-6 border-b border-[#EBEBEB]">
         <View className="flex flex-row justify-between">
           <View className="w-8 h-8 bg-black rounded-full" />
         </View>
@@ -226,8 +241,7 @@ export default function AccountSecurityScreen() {
       </View>
 
       <ScrollView>
-        <View className="mx-6 gap-4">
-          <Spacer size={20} />
+        <View className="mx-6 my-5 gap-4">
           <View>
             <ThemedText fontSize={12} fontWeight={800}>
               SEED PHRASE
@@ -244,13 +258,13 @@ export default function AccountSecurityScreen() {
             <Button
               text="Reveal Seed Phrase"
               type="primary-rounded"
-              onPress={() => setSecurityQuizVisible(true)}
+              onPress={() => setSecurityQuizModalVisible(true)}
             />
             <Spacer size={8} />
             <Button
               text="Verify Seed Phrase"
               type="secondary-rounded"
-              onPress={() => setVerifySeedPhraseVisible(true)}
+              onPress={() => setVerifySeedPhraseModalVisible(true)}
             />
             <Spacer size={12} />
             <ThemedText fontSize={14}>
@@ -523,7 +537,6 @@ export default function AccountSecurityScreen() {
               </View>
             </View>
           </View>
-          <Spacer size={20} />
         </View>
       </ScrollView>
     </View>

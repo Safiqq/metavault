@@ -658,8 +658,6 @@ export function GeneratorPassword() {
           </View>
         </View>
       </View>
-
-      <Spacer size={32} />
     </ScrollView>
   );
 }

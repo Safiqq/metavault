@@ -14,21 +14,16 @@ const NON_SENSITIVE_STATE_KEY = "NON_SENSITIVE_APP_STATE";
 export const saveState = async (state: Partial<StoreStates>): Promise<void> => {
   try {
     const sensitiveState: Partial<StoreStates> = {
+      authState: state.authState,
+      currentState: state.currentState,
+
       email: state.email,
-      name: state.name,
       mnemonic: state.mnemonic,
 
       generatorData: state.generatorData,
-      vaultData: state.vaultData,
     };
 
     const nonSensitiveState: Partial<StoreStates> = {
-      currentState: state.currentState,
-
-      emailVerified: state.emailVerified,
-      mnemonicVerified: state.mnemonicVerified,
-      passkeyVerified: state.passkeyVerified,
-
       lastMnemonicVerification: state.lastMnemonicVerification,
       lastSessionRenewal: state.lastSessionRenewal,
 
@@ -45,8 +40,7 @@ export const saveState = async (state: Partial<StoreStates>): Promise<void> => {
       NON_SENSITIVE_STATE_KEY,
       nonSensitiveStateString
     );
-  } catch (error) {
-  }
+  } catch (error) {}
 };
 
 /**
@@ -87,6 +81,5 @@ export const clearState = async (): Promise<void> => {
       appStateStore.removeItem(SENSITIVE_STATE_KEY),
       AsyncStorage.removeItem(NON_SENSITIVE_STATE_KEY),
     ]);
-  } catch (error) {
-  }
+  } catch (error) {}
 };

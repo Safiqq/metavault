@@ -23,12 +23,15 @@ export default function GetStartedScreen() {
   return (
     <View
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
-      className={`flex-1 w-full ${Platform.OS === "web" && "max-w-2xl mx-auto"}`}
+      className={`flex-1 w-full ${
+        Platform.OS === "web" && "max-w-2xl mx-auto"
+      }`}
     >
       <Header
         titleText="MetaVault"
         leftButtonText="Back"
         leftButtonBackImage={true}
+        leftButtonTarget={ROUTES.GUEST.LANDING}
       />
       <ScrollView className="flex-1 px-12">
         <View className="my-10">
@@ -62,9 +65,13 @@ export default function GetStartedScreen() {
             <ThemedText>
               Go passwordless and use another authentication factor (such as{" "}
             </ThemedText>
-            <ThemedText fontWeight={700}>&apos;something you have&apos;</ThemedText>
+            <ThemedText fontWeight={700}>
+              &apos;something you have&apos;
+            </ThemedText>
             <ThemedText> or </ThemedText>
-            <ThemedText fontWeight={700}>&apos;something you are&apos;</ThemedText>
+            <ThemedText fontWeight={700}>
+              &apos;something you are&apos;
+            </ThemedText>
             <ThemedText>) to log in.</ThemedText>
           </ThemedText>
         </View>

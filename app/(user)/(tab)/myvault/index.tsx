@@ -12,24 +12,26 @@ import { ThemedTextInput } from "@/components/ThemedTextInput";
 import { DropdownMenu } from "@/components/ui/DropdownMenu";
 import { Line } from "@/components/ui/Line";
 import { MenuOption } from "@/components/ui/MenuOption";
-import { AddCredential } from "@/components/ui/Modal/AddCredential";
-import { AddFolder } from "@/components/ui/Modal/AddFolder";
-import { AddItem } from "@/components/ui/Modal/AddItem";
-import { EditFolder } from "@/components/ui/Modal/EditFolder";
+import { AddCredentialModal } from "@/components/ui/Modal/AddCredentialModal";
+import { AddFolderModal } from "@/components/ui/Modal/AddFolderModal";
+import { AddItemModal } from "@/components/ui/Modal/AddItemModal";
+import { EditFolderModal } from "@/components/ui/Modal/EditFolderModal";
+import { FullScreenLoadingOverlay } from "@/components/ui/FullScreenLoadingOverlay";
+import { RefreshableScrollView } from "@/components/ui/RefreshableScrollView";
 import { ROUTES } from "@/constants/AppConstants";
 import { useAlert } from "@/contexts/AlertProvider";
+import { useAppState } from "@/contexts/AppStateProvider";
 import { useClipboard } from "@/lib/clipboard";
-import { supabase } from "@/lib/supabase";
 import { FoldersRow } from "@/lib/types";
+import {
+  getFolders,
+  deleteFolder,
+  getCurrentUser,
+} from "@/lib/supabase/database";
+import { vaultManager } from "@/lib/vaultManager";
 import { Href, router, useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
-import {
-  Platform,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  View,
-} from "react-native";
+import { Platform, Pressable, View } from "react-native";
 import ReactNativeModal from "react-native-modal";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -44,13 +46,18 @@ export default function MyVaultScreen() {
   const [dropdownVisible, setDropdownVisible] = useState<{
     [key: string]: boolean;
   }>({});
-  const [loginsCount, setLoginsCount] = useState<number>(0);
-  const [sshKeysCount, setSshKeysCount] = useState<number>(0);
+  const [vaultsCount, setVaultsCount] = useState<{
+    login: number;
+    ssh_key: number;
+    trash: number;
+  }>({
+    login: 0,
+    ssh_key: 0,
+    trash: 0,
+  });
   const [foldersCount, setFoldersCount] = useState<Record<string, number>>({});
   const [folders, setFolders] = useState<FoldersRow[]>([]);
-  const [trashCount, setTrashCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
   const [dropdownAddVisible, setDropdownAddVisible] = useState<boolean>(false);
   const [addFolderVisible, setAddFolderVisible] = useState<boolean>(false);
@@ -62,73 +69,100 @@ export default function MyVaultScreen() {
 
   const [selectedFolder, setSelectedFolder] = useState<FolderItem>();
   const [editFolderVisible, setEditFolderVisible] = useState<boolean>(false);
+  const [isAlertShown, setIsAlertShown] = useState<boolean>(false);
 
   const { showAlert } = useAlert();
   const { copyToClipboard } = useClipboard();
+  const { state } = useAppState();
+
+  const initializeVaultIfNeeded = useCallback(async (): Promise<boolean> => {
+    // Check if vault is already initialized
+    console.log("vaultManager.isInitialized()", vaultManager.isInitialized());
+    if (vaultManager.isInitialized()) {
+      return true;
+    }
+
+    // Check if we have the necessary data to initialize
+    if (!state.mnemonic || state.mnemonic.length === 0 || !state.email) {
+      showAlert("Error", "Missing vault credentials. Please log in again.");
+      return false;
+    }
+
+    // Show alert and initialize vault
+    return new Promise<boolean>((resolve) => {
+      setIsAlertShown(true);
+      showAlert(
+        "Preparing Your Vault",
+        "After this, we'll derive your encryption keys from your seed phrase. This process may take a few moments.",
+        [
+          {
+            text: "OK",
+            onPress: async () => {
+              try {
+                setIsAlertShown(false);
+                await vaultManager.initialize(state.mnemonic, state.email);
+                resolve(true);
+              } catch {
+                showAlert(
+                  "Error",
+                  "Failed to initialize vault. Please try again.",
+                  [
+                    {
+                      text: "OK",
+                      onPress: () => setIsAlertShown(false),
+                    },
+                  ]
+                );
+                resolve(false);
+              }
+            },
+          },
+        ]
+      );
+    });
+  }, [state, showAlert]);
 
   const fetchCounts = useCallback(async () => {
-    const { data: foldersData, error: foldersError } = await supabase
-      .from("folders")
-      .select()
-      .order("name");
-    if (foldersError) return;
-    setFolders(foldersData || []);
+    try {
+      // Initialize vault if needed
+      const vaultReady = await initializeVaultIfNeeded();
+      if (!vaultReady) return;
 
-    const { data: loginsData, error: loginsError } = await supabase
-      .from("logins")
-      .select()
-      .is("deleted_at", null);
-    if (loginsError) return;
-    setLoginsCount(loginsData.length || 0);
+      // Get folders from database
+      const user = await getCurrentUser();
+      if (!user) return;
 
-    const { data: sshKeysData, error: sshKeysError } = await supabase
-      .from("ssh_keys")
-      .select()
-      .is("deleted_at", null);
-    if (sshKeysError) return;
-    setSshKeysCount(sshKeysData.length || 0);
+      const foldersData = await getFolders(user.id);
+      setFolders(foldersData || []);
 
-    const { count: deletedLoginsCount, error: deletedLoginsError } =
-      await supabase
-        .from("logins")
-        .select("*", { count: "exact", head: true })
-        .not("deleted_at", "is", null);
-    if (deletedLoginsError) return;
+      // Get vault data from vaultManager
+      const vaultData = vaultManager.getCachedVaultData();
+      const trashData = vaultManager.getDeletedVaultData();
+      console.log("vauldData", vaultData);
+      if (!vaultData) return;
 
-    const { count: deletedSshKeysCount, error: deletedSshKeysError } =
-      await supabase
-        .from("ssh_keys")
-        .select("*", { count: "exact", head: true })
-        .not("deleted_at", "is", null);
-    if (deletedSshKeysError) return;
+      // Count total vault items
+      setVaultsCount({
+        login: vaultData.filter((item) => item.item_type === "login").length,
+        ssh_key: vaultData.filter((item) => item.item_type === "ssh_key")
+          .length,
+        trash: trashData.length,
+      });
 
-    setTrashCount((deletedLoginsCount || 0) + (deletedSshKeysCount || 0));
+      // Count items per folder from vault data
+      const combinedFoldersCount: { [key: string]: number } = {};
 
-    const loginFoldersCount = loginsData.reduce((acc, item) => {
-      const folderId = item.folder_id;
-      acc[folderId] = (acc[folderId] || 0) + 1;
-      return acc;
-    }, {});
-    const sshKeyFoldersCount = sshKeysData.reduce((acc, item) => {
-      const folderId = item.folder_id;
-      acc[folderId] = (acc[folderId] || 0) + 1;
-      return acc;
-    }, {});
+      vaultData.forEach((item) => {
+        const folderId = item.folder_id;
+        combinedFoldersCount[folderId] =
+          (combinedFoldersCount[folderId] || 0) + 1;
+      });
 
-    const combinedFoldersCount: { [key: string]: number } = {};
-    const allFolderIds = new Set([
-      ...Object.keys(loginFoldersCount),
-      ...Object.keys(sshKeyFoldersCount),
-    ]);
-
-    allFolderIds.forEach((folderId) => {
-      combinedFoldersCount[folderId] =
-        (loginFoldersCount[folderId] || 0) +
-        (sshKeyFoldersCount[folderId] || 0);
-    });
-
-    setFoldersCount(combinedFoldersCount);
-  }, []);
+      setFoldersCount(combinedFoldersCount);
+    } catch (error) {
+      console.error("Error fetching counts:", error);
+    }
+  }, [initializeVaultIfNeeded]);
 
   useFocusEffect(
     useCallback(() => {
@@ -136,12 +170,6 @@ export default function MyVaultScreen() {
       fetchCounts().finally(() => setIsLoading(false));
     }, [fetchCounts])
   );
-
-  const onRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    await fetchCounts();
-    setIsRefreshing(false);
-  }, [fetchCounts]);
 
   const toggleDropdown = (folderId: string) => {
     setDropdownVisible((prev) => ({
@@ -165,14 +193,7 @@ export default function MyVaultScreen() {
         style: "destructive",
         onPress: async () => {
           try {
-            const { error } = await supabase
-              .from("folders")
-              .delete()
-              .eq("id", folderId);
-
-            if (error) {
-              throw new Error("Failed to delete folder from database.");
-            }
+            await deleteFolder(folderId);
 
             setFolders((prevFolders) =>
               prevFolders.filter((folder) => folder.id !== folderId)
@@ -190,26 +211,26 @@ export default function MyVaultScreen() {
   // Filter items based on search text
   const filteredTypes = () => {
     if (!searchText.trim()) return { showLogin: true, showSSHKey: true };
-    
+
     const searchLower = searchText.toLowerCase();
     return {
       showLogin: "login".includes(searchLower),
-      showSSHKey: "ssh key".includes(searchLower) || "ssh".includes(searchLower) || "key".includes(searchLower),
+      showSSHKey: "ssh key".includes(searchLower),
     };
   };
 
   const filteredFolders = () => {
     if (!searchText.trim()) return folders;
-    
+
     const searchLower = searchText.toLowerCase();
-    return folders.filter(folder => 
+    return folders.filter((folder) =>
       folder.name.toLowerCase().includes(searchLower)
     );
   };
 
   const showTrash = () => {
     if (!searchText.trim()) return true;
-    
+
     const searchLower = searchText.toLowerCase();
     return "trash".includes(searchLower);
   };
@@ -218,7 +239,7 @@ export default function MyVaultScreen() {
     const types = filteredTypes();
     const folders = filteredFolders();
     const trash = showTrash();
-    
+
     return types.showLogin || types.showSSHKey || folders.length > 0 || trash;
   };
 
@@ -272,7 +293,7 @@ export default function MyVaultScreen() {
 
           <MenuOption
             onSelect={async () => {
-              await copyToClipboard(folder.name, "Name");
+              await copyToClipboard(folder.name);
               closeDropdown(folder.id);
             }}
           >
@@ -318,7 +339,7 @@ export default function MyVaultScreen() {
         animationInTiming={300}
         animationOutTiming={300}
       >
-        <AddCredential
+        <AddCredentialModal
           itemType={addCredentialType}
           onClose={() => setAddCredentialVisible(false)}
           onRefresh={async () => await fetchCounts()}
@@ -338,7 +359,7 @@ export default function MyVaultScreen() {
         animationInTiming={300}
         animationOutTiming={300}
       >
-        <AddFolder
+        <AddFolderModal
           onClose={() => setAddFolderVisible(false)}
           onRefresh={async () => await fetchCounts()}
         />
@@ -353,7 +374,7 @@ export default function MyVaultScreen() {
         animationInTiming={300}
         animationOutTiming={300}
       >
-        <EditFolder
+        <EditFolderModal
           folder={selectedFolder}
           onClose={() => setEditFolderVisible(false)}
           onRefresh={async () => await fetchCounts()}
@@ -386,11 +407,9 @@ export default function MyVaultScreen() {
         </View>
       </View>
 
-      <ScrollView
+      <RefreshableScrollView
         className="flex-1 px-3 pt-4"
-        refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
-        }
+        onRefresh={fetchCounts}
       >
         {searchText.trim() && !hasSearchResults() ? (
           <View className="items-center py-12">
@@ -406,7 +425,10 @@ export default function MyVaultScreen() {
             {(filteredTypes().showLogin || filteredTypes().showSSHKey) && (
               <>
                 <ThemedText fontSize={12} fontWeight={800}>
-                  TYPES ({(filteredTypes().showLogin ? 1 : 0) + (filteredTypes().showSSHKey ? 1 : 0)})
+                  TYPES (
+                  {(filteredTypes().showLogin ? 1 : 0) +
+                    (filteredTypes().showSSHKey ? 1 : 0)}
+                  )
                 </ThemedText>
 
                 <Spacer size={4} />
@@ -416,14 +438,16 @@ export default function MyVaultScreen() {
                     <>
                       <Pressable
                         className="flex flex-row items-center justify-between"
-                        onPress={() => router.push(ROUTES.USER.MY_VAULT.TYPES.LOGIN)}
+                        onPress={() =>
+                          router.push(ROUTES.USER.MY_VAULT.TYPES.LOGIN)
+                        }
                       >
                         <View className="flex flex-row items-center gap-3">
                           <GlobalIcon width={16} height={16} />
                           <ThemedText fontSize={14}>Login</ThemedText>
                         </View>
                         <ThemedText fontSize={14}>
-                          {isLoading ? "..." : loginsCount}
+                          {isLoading ? "..." : vaultsCount.login}
                         </ThemedText>
                       </Pressable>
                       {filteredTypes().showSSHKey && <Line />}
@@ -433,14 +457,16 @@ export default function MyVaultScreen() {
                   {filteredTypes().showSSHKey && (
                     <Pressable
                       className="flex flex-row items-center justify-between"
-                      onPress={() => router.push(ROUTES.USER.MY_VAULT.TYPES.SSH_KEY)}
+                      onPress={() =>
+                        router.push(ROUTES.USER.MY_VAULT.TYPES.SSH_KEY)
+                      }
                     >
                       <View className="flex flex-row items-center gap-3">
                         <KeyIcon width={16} height={16} />
                         <ThemedText fontSize={14}>SSH key</ThemedText>
                       </View>
                       <ThemedText fontSize={14}>
-                        {isLoading ? "..." : sshKeysCount}
+                        {isLoading ? "..." : vaultsCount.ssh_key}
                       </ThemedText>
                     </Pressable>
                   )}
@@ -492,21 +518,6 @@ export default function MyVaultScreen() {
               </>
             )}
 
-            {!searchText.trim() && isLoading && (
-              <>
-                <ThemedText fontSize={12} fontWeight={800}>
-                  FOLDERS (...)
-                </ThemedText>
-                <Spacer size={4} />
-                <View className="bg-[#EBEBEB] py-4 px-4 rounded-lg items-center">
-                  <ThemedText fontSize={14} className="text-gray-600">
-                    Loading folders...
-                  </ThemedText>
-                </View>
-                <Spacer size={16} />
-              </>
-            )}
-
             {showTrash() && (
               <>
                 <ThemedText fontSize={12} fontWeight={800}>
@@ -523,7 +534,7 @@ export default function MyVaultScreen() {
                       <ThemedText fontSize={14}>Trash</ThemedText>
                     </View>
                     <ThemedText fontSize={14}>
-                      {isLoading ? "..." : trashCount}
+                      {isLoading ? "..." : vaultsCount.trash}
                     </ThemedText>
                   </Pressable>
                 </View>
@@ -533,9 +544,9 @@ export default function MyVaultScreen() {
         )}
 
         <Spacer size={80} />
-      </ScrollView>
+      </RefreshableScrollView>
       <View className="absolute bottom-0 right-0 px-6 pb-4">
-        <AddItem
+        <AddItemModal
           dropdownVisible={dropdownAddVisible}
           setDropdownVisible={setDropdownAddVisible}
           callback={(e) => {
@@ -548,6 +559,11 @@ export default function MyVaultScreen() {
           }}
         />
       </View>
+
+      <FullScreenLoadingOverlay
+        visible={isLoading && !isAlertShown}
+        text="Loading vault items..."
+      />
     </View>
   );
 }

@@ -1,7 +1,7 @@
 import { ThemedText } from "@/components/ThemedText";
 import Spacer from "@/components/Spacer";
 import React from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { Platform, Pressable, ScrollView, View } from "react-native";
 
 interface ListItemProps {
   children: React.ReactNode;
@@ -97,7 +97,11 @@ export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ callback }) => {
   ];
 
   return (
-    <View className="absolute bg-white w-full z-20 bottom-0 rounded-t-lg h-3/4">
+    <View
+      className={`flex-1 w-full rounded-t-lg bg-white ${
+        Platform.OS === "web" && "max-w-2xl mx-auto"
+      }`}
+    >
       <View className="rounded-t-lg bg-[#EBEBEB] flex flex-row justify-between py-3 px-6 items-center">
         <View className="flex-1">
           <Pressable onPress={callback}>
@@ -114,159 +118,194 @@ export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ callback }) => {
         <View className="flex-1" />
       </View>
 
-      <ScrollView contentContainerClassName="p-6">
-        <ThemedText fontWeight={700} fontSize={18} className="text-black">
-          Privacy Policy
-        </ThemedText>
-        <Spacer size={8} />
-        <ThemedText fontSize={12} className="text-gray-600">
-          Last updated: July 28, 2025
-        </ThemedText>
+      <ScrollView>
+        <View className="mx-6 py-5">
+          <View>
+            <ThemedText fontWeight={700} fontSize={18} className="text-black">
+              Privacy Policy
+            </ThemedText>
 
-        <Spacer size={20} />
+            <Spacer size={8} />
 
-        <ThemedText className="text-gray-800">
-          This Privacy Policy describes Our policies and procedures on the
-          collection, use and disclosure of Your information when You use the
-          Service and tells You about Your privacy rights and how the law
-          protects You.
-        </ThemedText>
-        
-        <Spacer size={12} />
-        
-        <ThemedText className="text-gray-800">
-          We use Your Personal data to provide and improve the Service. By using
-          the Service, You agree to the collection and use of information in
-          accordance with this Privacy Policy.
-        </ThemedText>
+            <ThemedText fontSize={12} className="text-gray-600">
+              Last updated: July 28, 2025
+            </ThemedText>
 
-        <Spacer size={24} />
+            <Spacer size={20} />
 
-        <ThemedText fontWeight={700} fontSize={16} className="text-black">
-          Interpretation
-        </ThemedText>
-        <Spacer size={8} />
-        <ThemedText className="text-gray-800">
-          The words of which the initial letter is capitalized have meanings
-          defined under the following conditions. The following definitions
-          shall have the same meaning regardless of whether they appear in
-          singular or in plural.
-        </ThemedText>
+            <ThemedText className="text-gray-800">
+              This Privacy Policy describes Our policies and procedures on the
+              collection, use and disclosure of Your information when You use
+              the Service and tells You about Your privacy rights and how the
+              law protects You.
+            </ThemedText>
 
-        <Spacer size={24} />
+            <Spacer size={12} />
 
-        <ThemedText fontWeight={700} fontSize={16} className="text-black">
-          Definitions
-        </ThemedText>
-        <Spacer size={8} />
-        <ThemedText className="text-gray-800">
-          For the purposes of this Privacy Policy:
-        </ThemedText>
-        <Spacer size={12} />
-        <UnorderedList>
-          {definitions.map((item, index) => (
-            <ListItem key={index}>
-              <ThemedText fontWeight={700} className="text-black">
-                {item.term}
-              </ThemedText>{" "}
-              <ThemedText className="text-gray-800">{item.definition}</ThemedText>
-            </ListItem>
-          ))}
-        </UnorderedList>
+            <ThemedText className="text-gray-800">
+              We use Your Personal data to provide and improve the Service. By
+              using the Service, You agree to the collection and use of
+              information in accordance with this Privacy Policy.
+            </ThemedText>
 
-        <Spacer size={24} />
+            <Spacer size={24} />
 
-        <ThemedText fontWeight={700} fontSize={16} className="text-black">
-          Personal Data Collected
-        </ThemedText>
-        <Spacer size={8} />
-        <ThemedText className="text-gray-800">
-          While using Our Service, We may ask You to provide Us with certain
-          personally identifiable information that can be used to contact or
-          identify You. Personally identifiable information may include, but is
-          not limited to:
-        </ThemedText>
-        <Spacer size={12} />
-        <UnorderedList>
-          <ListItem>
-            <ThemedText className="text-gray-800">Email address</ThemedText>
-          </ListItem>
-          <ListItem>
-            <ThemedText className="text-gray-800">First name and last name</ThemedText>
-          </ListItem>
-          <ListItem>
-            <ThemedText className="text-gray-800">Usage Data</ThemedText>
-          </ListItem>
-        </UnorderedList>
+            <ThemedText fontWeight={700} fontSize={16} className="text-black">
+              Interpretation
+            </ThemedText>
 
-        <Spacer size={24} />
+            <Spacer size={8} />
 
-        <ThemedText fontWeight={700} fontSize={16} className="text-black">
-          Usage Data
-        </ThemedText>
-        <Spacer size={8} />
-        <ThemedText className="text-gray-800">
-          Usage Data is collected automatically when using the Service. Usage
-          Data may include information such as Your Device&apos;s Internet Protocol
-          address (e.g. IP address), browser type, browser version, the pages of
-          our Service that You visit, the time and date of Your visit, the time
-          spent on those pages, unique device identifiers and other diagnostic
-          data.
-        </ThemedText>
+            <ThemedText className="text-gray-800">
+              The words of which the initial letter is capitalized have meanings
+              defined under the following conditions. The following definitions
+              shall have the same meaning regardless of whether they appear in
+              singular or in plural.
+            </ThemedText>
 
-        <Spacer size={12} />
+            <Spacer size={24} />
 
-        <ThemedText className="text-gray-800">
-          When You access the Service by or through a mobile device, We may
-          collect certain information automatically, including, but not limited
-          to, the type of mobile device You use, Your mobile device unique ID,
-          the IP address of Your mobile device, Your mobile operating system,
-          the type of mobile Internet browser You use, unique device identifiers
-          and other diagnostic data.
-        </ThemedText>
+            <ThemedText fontWeight={700} fontSize={16} className="text-black">
+              Definitions
+            </ThemedText>
 
-        <Spacer size={24} />
+            <Spacer size={8} />
 
-        <ThemedText fontWeight={700} fontSize={16} className="text-black">
-          Information Collected while Using the Application
-        </ThemedText>
-        <Spacer size={8} />
-        <ThemedText className="text-gray-800">
-          While using Our Application, in order to provide features of Our
-          Application, We may collect, with Your prior permission:
-        </ThemedText>
-        <Spacer size={12} />
-        <UnorderedList>
-          <ListItem>
-            <ThemedText className="text-gray-800">Information regarding your location</ThemedText>
-          </ListItem>
-        </UnorderedList>
-        <Spacer size={12} />
-        <ThemedText className="text-gray-800">
-          We use this information to provide features of Our Service, to improve
-          and customize Our Service. The information may be uploaded to the
-          Company&apos;s servers and/or a Service Provider&apos;s server or it may be
-          simply stored on Your device. You can enable or disable access to this
-          information at any time, through Your Device settings.
-        </ThemedText>
+            <ThemedText className="text-gray-800">
+              For the purposes of this Privacy Policy:
+            </ThemedText>
 
-        <Spacer size={24} />
+            <Spacer size={12} />
 
-        <ThemedText fontWeight={700} fontSize={16} className="text-black">
-          Contact Us
-        </ThemedText>
-        <Spacer size={8} />
-        <ThemedText className="text-gray-800">
-          If you have any questions about this Privacy Policy, You can contact
-          us:
-        </ThemedText>
-        <Spacer size={12} />
-        <UnorderedList>
-          <ListItem>
-            <ThemedText className="text-gray-800">By email: szarifin20041@gmail.com</ThemedText>
-          </ListItem>
-        </UnorderedList>
-        <Spacer size={24} />
+            <UnorderedList>
+              {definitions.map((item, index) => (
+                <ListItem key={index}>
+                  <ThemedText fontWeight={700} className="text-black">
+                    {item.term}
+                  </ThemedText>{" "}
+                  <ThemedText className="text-gray-800">
+                    {item.definition}
+                  </ThemedText>
+                </ListItem>
+              ))}
+            </UnorderedList>
+
+            <Spacer size={24} />
+
+            <ThemedText fontWeight={700} fontSize={16} className="text-black">
+              Personal Data Collected
+            </ThemedText>
+
+            <Spacer size={8} />
+
+            <ThemedText className="text-gray-800">
+              While using Our Service, We may ask You to provide Us with certain
+              personally identifiable information that can be used to contact or
+              identify You. Personally identifiable information may include, but
+              is not limited to:
+            </ThemedText>
+
+            <Spacer size={12} />
+
+            <UnorderedList>
+              <ListItem>
+                <ThemedText className="text-gray-800">Email address</ThemedText>
+              </ListItem>
+              <ListItem>
+                <ThemedText className="text-gray-800">
+                  First name and last name
+                </ThemedText>
+              </ListItem>
+              <ListItem>
+                <ThemedText className="text-gray-800">Usage Data</ThemedText>
+              </ListItem>
+            </UnorderedList>
+
+            <Spacer size={24} />
+
+            <ThemedText fontWeight={700} fontSize={16} className="text-black">
+              Usage Data
+            </ThemedText>
+
+            <Spacer size={8} />
+
+            <ThemedText className="text-gray-800">
+              Usage Data is collected automatically when using the Service.
+              Usage Data may include information such as Your Device&apos;s
+              Internet Protocol address (e.g. IP address), browser type, browser
+              version, the pages of our Service that You visit, the time and
+              date of Your visit, the time spent on those pages, unique device
+              identifiers and other diagnostic data.
+            </ThemedText>
+
+            <Spacer size={12} />
+
+            <ThemedText className="text-gray-800">
+              When You access the Service by or through a mobile device, We may
+              collect certain information automatically, including, but not
+              limited to, the type of mobile device You use, Your mobile device
+              unique ID, the IP address of Your mobile device, Your mobile
+              operating system, the type of mobile Internet browser You use,
+              unique device identifiers and other diagnostic data.
+            </ThemedText>
+
+            <Spacer size={24} />
+
+            <ThemedText fontWeight={700} fontSize={16} className="text-black">
+              Information Collected while Using the Application
+            </ThemedText>
+
+            <Spacer size={8} />
+
+            <ThemedText className="text-gray-800">
+              While using Our Application, in order to provide features of Our
+              Application, We may collect, with Your prior permission:
+            </ThemedText>
+            <Spacer size={12} />
+            <UnorderedList>
+              <ListItem>
+                <ThemedText className="text-gray-800">
+                  Information regarding your location
+                </ThemedText>
+              </ListItem>
+            </UnorderedList>
+
+            <Spacer size={12} />
+
+            <ThemedText className="text-gray-800">
+              We use this information to provide features of Our Service, to
+              improve and customize Our Service. The information may be uploaded
+              to the Company&apos;s servers and/or a Service Provider&apos;s
+              server or it may be simply stored on Your device. You can enable
+              or disable access to this information at any time, through Your
+              Device settings.
+            </ThemedText>
+
+            <Spacer size={24} />
+
+            <ThemedText fontWeight={700} fontSize={16} className="text-black">
+              Contact Us
+            </ThemedText>
+
+            <Spacer size={8} />
+
+            <ThemedText className="text-gray-800">
+              If you have any questions about this Privacy Policy, You can
+              contact us:
+            </ThemedText>
+
+            <Spacer size={12} />
+
+            <UnorderedList>
+              <ListItem>
+                <ThemedText className="text-gray-800">
+                  By email: szarifin20041@gmail.com
+                </ThemedText>
+              </ListItem>
+            </UnorderedList>
+            <Spacer size={24} />
+          </View>
+        </View>
       </ScrollView>
     </View>
   );

@@ -19,8 +19,8 @@ import { Line } from "../Line";
 import { Switch } from "../Switch";
 
 export function GeneratorPassphrase() {
-  const MIN_WORDS = APP_CONSTANTS.MIN_WORDS;
-  const MAX_WORDS = APP_CONSTANTS.MAX_WORDS;
+  const MIN_PASSPHRASE_WORDS = APP_CONSTANTS.MIN_PASSPHRASE_WORDS;
+  const MAX_PASSPHRASE_WORDS = APP_CONSTANTS.MAX_PASSPHRASE_WORDS;
 
   const [passphraseGeneratorStates, setPassphraseGeneratorStates] = useState<{
     wordsNumber: number;
@@ -28,7 +28,7 @@ export function GeneratorPassphrase() {
     capitalize: boolean;
     includeNumber: boolean;
   }>({
-    wordsNumber: APP_CONSTANTS.DEFAULT_WORDS_COUNT,
+    wordsNumber: APP_CONSTANTS.DEFAULT_PASSPHRASE_LENGTH,
     wordsSeparator: "-",
     capitalize: false,
     includeNumber: false,
@@ -70,7 +70,7 @@ export function GeneratorPassphrase() {
   }, [passphraseGeneratorStates]);
 
   const handleCopyPassphrase = useCallback(() => {
-    copyToClipboard(passphrase, "Passphrase");
+    copyToClipboard(passphrase);
     setState({
       ...state,
       generatorData: [
@@ -116,11 +116,11 @@ export function GeneratorPassphrase() {
           <ThemedText fontSize={14}>Words</ThemedText>
           <View className="flex flex-row items-center gap-2">
             <Pressable
-              disabled={passphraseGeneratorStates.wordsNumber <= MIN_WORDS}
+              disabled={passphraseGeneratorStates.wordsNumber <= MIN_PASSPHRASE_WORDS}
               onPress={() =>
                 setPassphraseGeneratorStates((prev) => ({
                   ...prev,
-                  wordsNumber: Math.max(MIN_WORDS, prev.wordsNumber - 1),
+                  wordsNumber: Math.max(MIN_PASSPHRASE_WORDS, prev.wordsNumber - 1),
                 }))
               }
             >
@@ -128,7 +128,7 @@ export function GeneratorPassphrase() {
                 width={24}
                 height={24}
                 color={
-                  passphraseGeneratorStates.wordsNumber <= MIN_WORDS
+                  passphraseGeneratorStates.wordsNumber <= MIN_PASSPHRASE_WORDS
                     ? "#BBBBBB"
                     : "#000000"
                 }
@@ -138,11 +138,11 @@ export function GeneratorPassphrase() {
               {passphraseGeneratorStates.wordsNumber}
             </ThemedText>
             <Pressable
-              disabled={passphraseGeneratorStates.wordsNumber >= MAX_WORDS}
+              disabled={passphraseGeneratorStates.wordsNumber >= MAX_PASSPHRASE_WORDS}
               onPress={() =>
                 setPassphraseGeneratorStates((prev) => ({
                   ...prev,
-                  wordsNumber: Math.min(MAX_WORDS, prev.wordsNumber + 1),
+                  wordsNumber: Math.min(MAX_PASSPHRASE_WORDS, prev.wordsNumber + 1),
                 }))
               }
             >
@@ -150,7 +150,7 @@ export function GeneratorPassphrase() {
                 width={24}
                 height={24}
                 color={
-                  passphraseGeneratorStates.wordsNumber >= MAX_WORDS
+                  passphraseGeneratorStates.wordsNumber >= MAX_PASSPHRASE_WORDS
                     ? "#BBBBBB"
                     : "#000000"
                 }
@@ -161,10 +161,8 @@ export function GeneratorPassphrase() {
 
         <Line />
 
-        <View>
-          <ThemedText fontSize={12} fontWeight={800}>
-            Separator
-          </ThemedText>
+        <View className="flex flex-row items-center justify-between">
+          <ThemedText fontSize={14}>Separator</ThemedText>
           <ThemedTextInput
             value={passphraseGeneratorStates.wordsSeparator}
             onChangeText={(text) =>
@@ -173,9 +171,10 @@ export function GeneratorPassphrase() {
                 wordsSeparator: text || "-",
               }))
             }
-            className="w-16 outline-none"
+            className="w-16 outline-none text-black text-right"
             fontSize={14}
             placeholder="-"
+            placeholderTextColor="#9CA3AF"
           />
         </View>
 

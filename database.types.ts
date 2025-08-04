@@ -19,19 +19,22 @@ export type Database = {
           challenge: string
           created_at: string
           expired_at: string
-          user_id: string
+          id: string
+          user_id: string | null
         }
         Insert: {
           challenge: string
           created_at?: string
           expired_at: string
-          user_id: string
+          id?: string
+          user_id?: string | null
         }
         Update: {
           challenge?: string
           created_at?: string
           expired_at?: string
-          user_id?: string
+          id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -74,49 +77,14 @@ export type Database = {
         }
         Relationships: []
       }
-      logins: {
-        Row: {
-          created_at: string
-          deleted_at: string | null
-          encrypted_payload: string
-          folder_id: string
-          id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          deleted_at?: string | null
-          encrypted_payload: string
-          folder_id: string
-          id?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          deleted_at?: string | null
-          encrypted_payload?: string
-          folder_id?: string
-          id?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "logins_e_folder_id_fkey"
-            columns: ["folder_id"]
-            isOneToOne: false
-            referencedRelation: "folders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       passkeys: {
         Row: {
           counter: number
           created_at: string
           credential_id: string
+          device_info: Json | null
+          last_used_at: string | null
+          name: string | null
           public_key: Json
           transports: Json[]
           user_id: string
@@ -125,6 +93,9 @@ export type Database = {
           counter: number
           created_at?: string
           credential_id: string
+          device_info?: Json | null
+          last_used_at?: string | null
+          name?: string | null
           public_key: Json
           transports: Json[]
           user_id: string
@@ -133,26 +104,11 @@ export type Database = {
           counter?: number
           created_at?: string
           credential_id?: string
+          device_info?: Json | null
+          last_used_at?: string | null
+          name?: string | null
           public_key?: Json
           transports?: Json[]
-          user_id?: string
-        }
-        Relationships: []
-      }
-      secrets: {
-        Row: {
-          created_at: string
-          hashed_secret: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          hashed_secret: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          hashed_secret?: string
           user_id?: string
         }
         Relationships: []
@@ -190,46 +146,35 @@ export type Database = {
         }
         Relationships: []
       }
-      ssh_keys: {
+      vaults: {
         Row: {
           created_at: string
-          deleted_at: string | null
-          encrypted_payload: string
-          fingerprint: string
-          folder_id: string
+          encrypted_blob: string
+          encryption_metadata: Json
           id: string
           updated_at: string
           user_id: string
+          vault_id: string
         }
         Insert: {
           created_at?: string
-          deleted_at?: string | null
-          encrypted_payload: string
-          fingerprint: string
-          folder_id: string
+          encrypted_blob: string
+          encryption_metadata: Json
           id?: string
           updated_at?: string
           user_id: string
+          vault_id: string
         }
         Update: {
           created_at?: string
-          deleted_at?: string | null
-          encrypted_payload?: string
-          fingerprint?: string
-          folder_id?: string
+          encrypted_blob?: string
+          encryption_metadata?: Json
           id?: string
           updated_at?: string
           user_id?: string
+          vault_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "ssh_keys_e_folder_id_fkey"
-            columns: ["folder_id"]
-            isOneToOne: false
-            referencedRelation: "folders"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {

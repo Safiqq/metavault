@@ -1,16 +1,16 @@
-import Spacer from "@/components/Spacer";
 import { ThemedText } from "@/components/ThemedText";
 import { useAlert } from "@/contexts/AlertProvider";
 import React, { useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { Platform, Pressable, ScrollView, View } from "react-native";
 import { Button } from "../Button";
+import { ModalHeader } from "../ModalHeader";
 
-interface SecurityQuizProps {
+interface SecurityQuizModalProps {
   onClose: () => void;
   onContinue: () => void;
 }
 
-export const SecurityQuiz: React.FC<SecurityQuizProps> = ({
+export const SecurityQuizModal: React.FC<SecurityQuizModalProps> = ({
   onClose,
   onContinue,
 }) => {
@@ -34,7 +34,7 @@ export const SecurityQuiz: React.FC<SecurityQuizProps> = ({
     if (answer === "B") {
       showAlert(
         "Correct",
-        "Sharing your Seed Phrase it never a good idea. Anyone claiming to need your Seed Phrase is lying to you. If you share it with them, they will steal your vaults."
+        "Sharing your Seed Phrase is never a good idea. Anyone claiming to need your Seed Phrase is lying to you. If you share it with them, they will steal your vaults."
       );
     }
   };
@@ -44,26 +44,15 @@ export const SecurityQuiz: React.FC<SecurityQuizProps> = ({
   };
 
   return (
-    <View className="absolute bg-white w-full z-20 bottom-0 rounded-t-lg h-3/4">
-      <View className="rounded-t-lg bg-[#EBEBEB] flex flex-row justify-between py-4 px-6 items-center">
-        <View className="flex-1">
-          <Pressable onPress={onClose}>
-            <ThemedText fontSize={14} className="text-[#0099FF]">
-              Close
-            </ThemedText>
-          </Pressable>
-        </View>
-        <View className="flex-1 items-center">
-          <ThemedText fontSize={14} fontWeight={700}>
-            Security quiz
-          </ThemedText>
-        </View>
-        <View className="flex-1" />
-      </View>
+    <View
+      className={`flex-1 w-full rounded-t-lg bg-white ${
+        Platform.OS === "web" && "max-w-2xl mx-auto"
+      }`}
+    >
+      <ModalHeader title="Security quiz" onClose={onClose} />
 
       <ScrollView>
-        <View className="mx-6 gap-3">
-          <Spacer size={20} />
+        <View className="mx-6 my-5 gap-4">
           <View>
             <ThemedText fontSize={14} className="text-center">
               To reveal your Seed Phrase, you need to correctly answer two
@@ -110,8 +99,7 @@ export const SecurityQuiz: React.FC<SecurityQuizProps> = ({
               <View className="bg-[#EBEBEB] rounded-lg px-4 py-4">
                 <View className="gap-2">
                   <ThemedText fontSize={14} fontWeight={800}>
-                    If anyone asks for your Seed Phrase,
-                    ...
+                    If anyone asks for your Seed Phrase, ...
                   </ThemedText>
                   <View className="gap-1">
                     <Pressable
@@ -150,8 +138,8 @@ export const SecurityQuiz: React.FC<SecurityQuizProps> = ({
               onClose();
               onContinue();
             }}
+            disabled={!isAnswersTrue()}
           />
-          <Spacer size={20} />
         </View>
       </ScrollView>
     </View>

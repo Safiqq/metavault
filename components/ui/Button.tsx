@@ -1,55 +1,74 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { Pressable, PressableProps } from "react-native";
 import { ThemedText } from "../ThemedText";
 
-type ButtonType = "primary" | "secondary" | "primary-rounded" | "secondary-rounded";
+type ButtonType =
+  | "primary"
+  | "secondary"
+  | "primary-rounded"
+  | "secondary-rounded"
+  | "danger-rounded";
 
-interface ButtonProps extends Omit<PressableProps, 'onPress'> {
+type ButtonSize = "default" | "small";
+
+interface ButtonProps extends Omit<PressableProps, "onPress"> {
   text: string;
   type?: ButtonType;
+  size?: ButtonSize;
   onPress: () => void;
   fontWeight?: 200 | 300 | 400 | 500 | 600 | 700 | 800;
   fontSize?: number;
   disabled?: boolean;
 }
 
-const getButtonStyles = (type: ButtonType, disabled: boolean): string => {
-  const baseStyles = "w-full py-5";
-  const roundedStyles = type.includes("rounded") ? "rounded-full" : "rounded-xl";
-  const colorStyles = type.includes("primary") 
-    ? (disabled ? "bg-black opacity-50" : "bg-black") 
-    : "bg-[#D9D9D9]";
+const getButtonStyles = (type: ButtonType, size: ButtonSize, disabled: boolean): string => {
+  const baseStyles = size === "small" ? "px-3 py-2" : "w-full py-5";
+  const roundedStyles = type.includes("rounded")
+    ? "rounded-full"
+    : "rounded-xl";
   
+  let colorStyles = "";
+  if (type.includes("primary")) {
+    colorStyles = disabled ? "bg-black opacity-50" : "bg-black";
+  } else if (type.includes("danger")) {
+    colorStyles = disabled ? "bg-red-500 opacity-50" : "bg-red-500";
+  } else {
+    colorStyles = "bg-[#D9D9D9]";
+  }
+
   return `${baseStyles} ${roundedStyles} ${colorStyles}`;
 };
 
 const getTextStyles = (type: ButtonType, disabled: boolean): string => {
   const baseTextStyles = "text-center";
-  const colorStyles = type.includes("primary") 
-    ? (disabled ? "text-gray-500" : "text-white") 
-    : "text-black";
+  let colorStyles = "";
   
+  if (type.includes("primary") || type.includes("danger")) {
+    colorStyles = "text-white";
+  } else {
+    colorStyles = "text-black";
+  }
+
   return `${baseTextStyles} ${colorStyles}`;
 };
 
-export const Button: React.FC<ButtonProps> = ({
+const ButtonComponent = React.memo<ButtonProps>(({
   text,
   type = "primary",
+  size = "default",
   onPress,
   fontWeight,
   fontSize = 14,
   disabled = false,
   ...pressableProps
 }) => {
-  const buttonStyles = getButtonStyles(type, disabled);
+  const buttonStyles = getButtonStyles(type, size, disabled);
   const textStyles = getTextStyles(type, disabled);
-  const textFontWeight = fontWeight ?? (type.includes("primary") ? 700 : 400);
+  const textFontWeight = fontWeight ?? (type.includes("primary") || type.includes("danger") ? 700 : 400);
 
-  const handlePress = () => {
-    if (!disabled) {
-      onPress();
-    }
-  };
+  const handlePress = useCallback(() => {
+    if (!disabled) onPress();
+  }, [disabled, onPress]);
 
   return (
     <Pressable
@@ -67,4 +86,8 @@ export const Button: React.FC<ButtonProps> = ({
       </ThemedText>
     </Pressable>
   );
-};
+});
+
+ButtonComponent.displayName = 'Button';
+
+export const Button = ButtonComponent;

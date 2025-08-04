@@ -2,31 +2,28 @@ import Spacer from "@/components/Spacer";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedTextInput } from "@/components/ThemedTextInput";
 import { useAlert } from "@/contexts/AlertProvider";
-import { supabase } from "@/lib/supabase";
-import {
-  CredentialItem,
-  FoldersRow,
-  LoginsInsert,
-  SshKeysInsert,
-} from "@/lib/types";
+import { getFoldersForSelect } from "@/lib/supabase/database";
+import { vaultManager } from "@/lib/vaultManager";
+import { DecryptedVaultItem, FoldersRow } from "@/lib/types";
 import React, { useEffect, useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { Platform, Pressable, ScrollView, View } from "react-native";
 import { DropdownMenu } from "../DropdownMenu";
 import { Line } from "../Line";
 import { MenuOption } from "../MenuOption";
 
 import { ArrowDownIcon, EyeIcon, EyeSlashIcon } from "@/assets/images/icons";
-import { useAppState } from "@/contexts/AppStateProvider";
 import { useAuth } from "@/contexts/AuthProvider";
-import { deriveKeys, encryptVault, mnemonicToSeed } from "@/lib/bip39";
+import { ModalHeader } from "../ModalHeader";
+import { LoadingIndicator } from "../LoadingIndicator";
+import * as Crypto from "expo-crypto";
 
-interface AddCredentialProps {
+interface AddCredentialModalProps {
   onClose: () => void;
   onRefresh: () => void;
   itemType: "login" | "ssh_key";
 }
 
-export const AddCredential: React.FC<AddCredentialProps> = ({
+export const AddCredentialModal: React.FC<AddCredentialModalProps> = ({
   onClose,
   onRefresh,
   itemType,
@@ -35,14 +32,16 @@ export const AddCredential: React.FC<AddCredentialProps> = ({
   const [showPassword, setShowPassword] = useState<boolean>(true);
   const [folders, setFolders] = useState<FoldersRow[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [itemRaw, setItemRaw] = useState<CredentialItem>({
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [itemRaw, setItemRaw] = useState<DecryptedVaultItem>({
+    id: "",
     folder_id: "",
     folder_name: "",
     item_name: "",
+    item_type: itemType,
 
     username: "",
     password: "",
-    website: "",
 
     fingerprint: "",
     public_key: "",
@@ -51,68 +50,49 @@ export const AddCredential: React.FC<AddCredentialProps> = ({
 
   const { user } = useAuth();
   const { showAlert } = useAlert();
-  const { state } = useAppState();
 
   const handleSave = async () => {
     try {
-      if (!state.mnemonic) return;
+      setIsSaving(true);
 
-      const userId = user?.id;
-      if (!userId) return;
-
-      if (itemType === "login") {
-        const data = {
-          item_name: itemRaw.item_name,
-          username: itemRaw.username,
-          password: itemRaw.password,
-          website: itemRaw.website,
-        };
-        const seed = await mnemonicToSeed(state.mnemonic);
-        const derivedKeys = await deriveKeys(seed);
-        const payload: LoginsInsert = {
-          user_id: userId,
-          folder_id: itemRaw.folder_id,
-          encrypted_payload: await encryptVault(
-            JSON.stringify(data),
-            derivedKeys
-          ),
-        };
-        const { error } = await supabase.from("logins").insert(payload);
-        if (error) throw error;
-
-        onClose();
-        showAlert("Success", "Added a new login credential.", [
-          { text: "OK", onPress: onRefresh },
-        ]);
-      } else if (itemType === "ssh_key") {
-        const data = {
-          item_name: itemRaw.item_name,
-          public_key: itemRaw.public_key,
-          private_key: itemRaw.private_key,
-        };
-        const seed = await mnemonicToSeed(state.mnemonic);
-        const derivedKeys = await deriveKeys(seed);
-        const payload: SshKeysInsert = {
-          user_id: userId,
-          folder_id: itemRaw.folder_id,
-          fingerprint: itemRaw.fingerprint,
-          encrypted_payload: await encryptVault(
-            JSON.stringify(data),
-            derivedKeys
-          ),
-        };
-        const { error } = await supabase.from("ssh_keys").insert(payload);
-        if (error) {
-          throw error;
-        }
-        onClose();
-        showAlert("Success", "Added a new SSH key credential.", [
-          { text: "OK", onPress: onRefresh },
-        ]);
+      // Get folder name for the credential item
+      const selectedFolder = folders.find((f) => f.id === itemRaw.folder_id);
+      if (!selectedFolder) {
+        throw new Error("Folder not found");
       }
+
+      // Create a credential item for vaultManager
+      const credentialItem: DecryptedVaultItem = {
+        id: Crypto.randomUUID(),
+        folder_id: itemRaw.folder_id,
+        folder_name: selectedFolder.name,
+        item_name: itemRaw.item_name,
+        item_type: itemType,
+
+        // Login fields
+        username: itemRaw.username || "",
+        password: itemRaw.password || "",
+
+        // SSH Key fields
+        fingerprint: itemRaw.fingerprint || "",
+        public_key: itemRaw.public_key || "",
+        private_key: itemRaw.private_key || "",
+      };
+
+      // Save using vaultManager
+      await vaultManager.upsertVaultItem(credentialItem);
+
+      onClose();
+      showAlert(
+        "Success",
+        `Added a new ${itemType === "login" ? "login" : "SSH key"} credential.`,
+        [{ text: "OK", onPress: onRefresh }]
+      );
     } catch (error) {
       console.error("Failed to save credential:", error);
       showAlert("Error", "Failed to save credential. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -141,10 +121,7 @@ export const AddCredential: React.FC<AddCredentialProps> = ({
   useEffect(() => {
     const fetchFolders = async () => {
       try {
-        const { data, error } = await supabase.from("folders").select();
-        if (error) {
-          return;
-        }
+        const data = await getFoldersForSelect(user?.id || "");
         setFolders(data);
 
         // Only set the folder if it's the first load (folder_id is empty)
@@ -166,40 +143,33 @@ export const AddCredential: React.FC<AddCredentialProps> = ({
     };
 
     fetchFolders();
-  }, [showAlert]); // Removed itemRaw from dependencies to prevent infinite loop
+  }, [showAlert, user?.id]); // Removed itemRaw from dependencies to prevent infinite loop
 
   return (
-    <View className="absolute bg-white w-full z-20 bottom-0 rounded-t-lg h-3/4">
-      <View className="rounded-t-lg bg-[#EBEBEB] flex flex-row justify-between py-4 px-6 items-center">
-        <View className="flex-1">
-          <Pressable onPress={onClose}>
-            <ThemedText fontSize={14} className="text-[#0099FF]">
-              Close
-            </ThemedText>
-          </Pressable>
-        </View>
-        <View className="flex-1 items-center">
-          <ThemedText fontSize={14} fontWeight={700}>
-            Add new {itemType === "login" ? "login" : "SSH key"}
+    <View
+      className={`flex-1 w-full rounded-t-lg bg-white ${
+        Platform.OS === "web" && "max-w-2xl mx-auto"
+      }`}
+    >
+      <ModalHeader
+        title={`Add new ${itemType === "login" ? "login" : "SSH key"}`}
+        onClose={onClose}
+      >
+        <Pressable onPress={handleSave} disabled={!isComplete()}>
+          <ThemedText
+            fontSize={14}
+            className={isComplete() ? "text-[#0099FF]" : "text-[#999999]"}
+          >
+            Save
           </ThemedText>
-        </View>
-        <View className="flex-1 items-end">
-          <Pressable onPress={handleSave} disabled={!isComplete()}>
-            <ThemedText
-              fontSize={14}
-              className={isComplete() ? "text-[0099FF]" : "text-black/40"}
-            >
-              Save
-            </ThemedText>
-          </Pressable>
-        </View>
-      </View>
+        </Pressable>
+      </ModalHeader>
 
       <ScrollView>
         <View className="mx-6">
           <Spacer size={20} />
           {isLoading ? (
-            <ThemedText fontSize={14}>Loading item...</ThemedText>
+            <LoadingIndicator text="Loading folders..." />
           ) : (
             <>
               <ThemedText fontSize={12} fontWeight={800}>
@@ -232,7 +202,7 @@ export const AddCredential: React.FC<AddCredentialProps> = ({
                   <ThemedText fontSize={12} fontWeight={800}>
                     Folder
                   </ThemedText>
-
+                  <Spacer size={8} />
                   <DropdownMenu
                     visible={isFolderVisible}
                     handleOpen={() => setIsFolderVisible(true)}
@@ -285,7 +255,7 @@ export const AddCredential: React.FC<AddCredentialProps> = ({
                       </ThemedText>
                       <ThemedTextInput
                         fontSize={14}
-                        className="flex-1 outline-none"
+                        className="outline-none"
                         placeholder="Enter your username"
                         value={itemRaw.username}
                         onChangeText={(text) =>
@@ -321,31 +291,6 @@ export const AddCredential: React.FC<AddCredentialProps> = ({
                           )}
                         </Pressable>
                       </View>
-                    </View>
-                  </View>
-
-                  <Spacer size={16} />
-
-                  <ThemedText fontSize={12} fontWeight={800}>
-                    AUTOFILL OPTIONS
-                  </ThemedText>
-
-                  <Spacer size={4} />
-
-                  <View className="bg-[#EBEBEB] px-4 py-4 rounded-lg gap-2">
-                    <View>
-                      <ThemedText fontSize={12} fontWeight={800}>
-                        Website (URI)
-                      </ThemedText>
-                      <ThemedTextInput
-                        fontSize={14}
-                        className="flex-1 outline-none"
-                        placeholder="Enter your website (URI)"
-                        value={itemRaw.website}
-                        onChangeText={(text) =>
-                          setItemRaw({ ...itemRaw, website: text })
-                        }
-                      />
                     </View>
                   </View>
                 </>
@@ -432,6 +377,13 @@ export const AddCredential: React.FC<AddCredentialProps> = ({
           <Spacer size={20} />
         </View>
       </ScrollView>
+
+      {isSaving && (
+        <LoadingIndicator
+          overlay
+          text={`Saving ${itemType === "login" ? "login" : "SSH key"}...`}
+        />
+      )}
     </View>
   );
 };

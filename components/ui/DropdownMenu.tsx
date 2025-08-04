@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import {
   View,
   Modal,
@@ -37,50 +37,65 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
   const triggerRef = useRef<View>(null);
   const [position, setPosition] = useState<Position>({ x: 0, y: 0, width: 0 });
 
-  useEffect(() => {
-    if (triggerRef.current && visible) {
-      triggerRef.current.measure((fx, fy, width, height, px, py) => {
-        const screenHeight = Dimensions.get("window").height;
-        const spaceBelow = screenHeight - (py + height);
-        const adjustedY =
-          spaceBelow < maxHeight && py > maxHeight
-            ? py - height // Show above if not enough space below
-            : py + height; // Show below normally
+  const measureTrigger = useCallback(() => {
+    if (!triggerRef.current || !visible) return;
 
-        setPosition({
-          x: px,
-          y: adjustedY,
-          width: width,
-        });
+    triggerRef.current.measure((fx, fy, width, height, px, py) => {
+      const screenHeight = Dimensions.get("window").height;
+      const spaceBelow = screenHeight - (py + height);
+      const adjustedY =
+        spaceBelow < maxHeight && py > maxHeight
+          ? py - 3 * height // Show above if not enough space below
+          : py + height; // Show below normally
+
+      setPosition({
+        x: px,
+        y: adjustedY,
+        width: width,
       });
-    }
+    });
   }, [visible, maxHeight]);
+
+  useEffect(() => {
+    if (visible) {
+      // Small delay to ensure component is mounted
+      const timer = setTimeout(measureTrigger, 10);
+      return () => clearTimeout(timer);
+    }
+  }, [visible, measureTrigger]);
+
+  const getDropdownLeftPosition = () => {
+    switch (pos) {
+      case "center":
+        return position.x + position.width / 2 - dropdownWidth / 2;
+      case "right":
+        return position.x + position.width - dropdownWidth;
+      default:
+        return position.x - position.width + dropdownWidth;
+    }
+  };
 
   return (
     <View>
       <TouchableWithoutFeedback onPress={handleOpen}>
         <View ref={triggerRef}>{trigger}</View>
       </TouchableWithoutFeedback>
+
       {visible && (
         <Modal
           transparent={true}
           visible={visible}
           animationType="fade"
           onRequestClose={handleClose}
+          statusBarTranslucent={true}
         >
           <TouchableWithoutFeedback onPress={handleClose}>
             <View className="flex-1">
-              {/* <View className="flex-1 justify-start items-start"> */}
               <View
                 className="absolute bg-[#4B4B4B] rounded-xl px-4 py-2"
                 style={{
                   top: position.y,
-                  left:
-                    pos === "center"
-                      ? position.x + position.width / 2 - dropdownWidth / 2
-                      : pos === "right"
-                      ? position.x + position.width - dropdownWidth
-                      : position.x - position.width + dropdownWidth,
+                  left: getDropdownLeftPosition(),
                   width: dropdownWidth,
                   maxHeight: maxHeight,
                 }}
@@ -88,6 +103,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
                 <ScrollView
                   showsVerticalScrollIndicator={true}
                   nestedScrollEnabled={true}
+                  bounces={false}
                 >
                   <View className="gap-2">{children}</View>
                 </ScrollView>

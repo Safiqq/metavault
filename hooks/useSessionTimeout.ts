@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { defaultState, useAppState } from "@/contexts/AppStateProvider";
-import { APP_STATES, StoreStates } from "@/lib/types";
+import { AUTH_STATES, AUTH_L_STATES, StoreStates } from "@/lib/types";
 import { router } from "expo-router";
 import { ROUTES } from "@/constants/AppConstants";
 import { supabase } from "@/lib/supabase";
@@ -34,9 +34,9 @@ export const useSessionTimeout = () => {
         if (sessionTimeoutAction === "Lock") {
           setState({
             ...state,
-            currentState: APP_STATES.LOGGED_IN_NEED_SESSION_RENEWAL,
+            currentState: AUTH_L_STATES.NEED_SESSION_RENEWAL,
           });
-          router.replace(ROUTES.USER.LOCKED);
+          router.push(ROUTES.USER.LOCKED);
         } else {
           await supabase
             .from("sessions")
@@ -48,7 +48,7 @@ export const useSessionTimeout = () => {
           await supabase.auth.signOut();
           await clearState();
           setState(defaultState); // Reset context state to defaults
-          router.replace(ROUTES.ROOT);
+          router.push(ROUTES.ROOT);
         }
         clearInterval(interval);
       }

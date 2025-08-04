@@ -2,19 +2,23 @@ import Spacer from "@/components/Spacer";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedTextInput } from "@/components/ThemedTextInput";
 import { useAlert } from "@/contexts/AlertProvider";
-import { supabase } from "@/lib/supabase";
+import { insertFolder } from "@/lib/supabase/database";
 import React, { useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { Platform, Pressable, ScrollView, View } from "react-native";
 
 import { useAppState } from "@/contexts/AppStateProvider";
 import { useAuth } from "@/contexts/AuthProvider";
+import { ModalHeader } from "../ModalHeader";
 
-interface AddFolderProps {
+interface AddFolderModalProps {
   onClose: () => void;
   onRefresh: () => void;
 }
 
-export const AddFolder: React.FC<AddFolderProps> = ({ onClose, onRefresh }) => {
+export const AddFolderModal: React.FC<AddFolderModalProps> = ({
+  onClose,
+  onRefresh,
+}) => {
   const [folderName, setFolderName] = useState<string>("");
 
   const { showAlert } = useAlert();
@@ -28,13 +32,10 @@ export const AddFolder: React.FC<AddFolderProps> = ({ onClose, onRefresh }) => {
       const userId = user?.id;
       if (!userId) return;
 
-      const { error } = await supabase.from("folders").insert({
+      await insertFolder({
         user_id: userId,
         name: folderName,
       });
-      if (error) {
-        throw error;
-      }
       onClose();
       showAlert("Success", "Added a new folder.", [
         { text: "OK", onPress: onRefresh },
@@ -50,31 +51,21 @@ export const AddFolder: React.FC<AddFolderProps> = ({ onClose, onRefresh }) => {
   };
 
   return (
-    <View className="absolute bg-white w-full z-20 bottom-0 rounded-t-lg h-3/4">
-      <View className="rounded-t-lg bg-[#EBEBEB] flex flex-row justify-between py-4 px-6 items-center">
-        <View className="flex-1">
-          <Pressable onPress={onClose}>
-            <ThemedText fontSize={14} className="text-[#0099FF]">
-              Close
-            </ThemedText>
-          </Pressable>
-        </View>
-        <View className="flex-1 items-center">
-          <ThemedText fontSize={14} fontWeight={700}>
-            Add new folder
+    <View
+      className={`flex-1 w-full rounded-t-lg bg-white ${
+        Platform.OS === "web" && "max-w-2xl mx-auto"
+      }`}
+    >
+      <ModalHeader title="Add new folder" onClose={onClose}>
+        <Pressable onPress={handleSave} disabled={!isComplete()}>
+          <ThemedText
+            fontSize={14}
+            className={isComplete() ? "text-[#0099FF]" : "text-[#999999]"}
+          >
+            Save
           </ThemedText>
-        </View>
-        <View className="flex-1 items-end">
-          <Pressable onPress={handleSave} disabled={!isComplete()}>
-            <ThemedText
-              fontSize={14}
-              className={isComplete() ? "text-[#0099FF]" : "text-black/40"}
-            >
-              Save
-            </ThemedText>
-          </Pressable>
-        </View>
-      </View>
+        </Pressable>
+      </ModalHeader>
 
       <ScrollView>
         <View className="mx-6">

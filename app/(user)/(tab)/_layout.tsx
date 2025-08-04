@@ -8,7 +8,7 @@ import { useMnemonicCheck } from "@/hooks/useMnemonicCheck";
 import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 import { Tabs } from "expo-router";
 import React from "react";
-import { View } from "react-native";
+import { Platform, View } from "react-native";
 
 export default function TabLayout() {
   // Setup session timeout and mnemonic check hooks
@@ -17,7 +17,9 @@ export default function TabLayout() {
 
   return (
     <View
-      style={{ flex: 1 }}
+      className={`flex-1 w-full ${
+        Platform.OS === "web" && "max-w-2xl mx-auto"
+      }`}
       onStartShouldSetResponder={() => {
         renewSession();
         return false;
@@ -31,6 +33,7 @@ export default function TabLayout() {
           },
           tabBarActiveTintColor: "#000000",
           tabBarInactiveTintColor: "#BBBBBB",
+
           headerShown: false,
         }}
       >

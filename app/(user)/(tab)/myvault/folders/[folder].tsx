@@ -4,28 +4,28 @@ import { ThemedText } from "@/components/ThemedText";
 import { DropdownMenu } from "@/components/ui/DropdownMenu";
 import { Header } from "@/components/ui/Header";
 import { MenuOption } from "@/components/ui/MenuOption";
-import { AddCredential } from "@/components/ui/Modal/AddCredential";
-import { AddItem } from "@/components/ui/Modal/AddItem";
-import { EditCredential } from "@/components/ui/Modal/EditCredential";
-import { ViewCredential } from "@/components/ui/Modal/ViewCredential";
+import { AddCredentialModal } from "@/components/ui/Modal/AddCredentialModal";
+import { AddItemModal } from "@/components/ui/Modal/AddItemModal";
+import { EditCredentialModal } from "@/components/ui/Modal/EditCredentialModal";
+import { ViewCredentialModal } from "@/components/ui/Modal/ViewCredentialModal";
+import { FullScreenLoadingOverlay } from "@/components/ui/FullScreenLoadingOverlay";
+import { RefreshableScrollView } from "@/components/ui/RefreshableScrollView";
 import { useAlert } from "@/contexts/AlertProvider";
-import { useAppState } from "@/contexts/AppStateProvider";
-import { decryptVault, deriveKeys, mnemonicToSeed } from "@/lib/bip39";
 import { useClipboard } from "@/lib/clipboard";
-import { supabase } from "@/lib/supabase";
-import { DecryptedLoginItem, DecryptedSSHKeyItem } from "@/lib/types";
+import { DecryptedVaultItem } from "@/lib/types";
+import { getFolders, getCurrentUser } from "@/lib/supabase/database";
+import { vaultManager } from "@/lib/vaultManager";
 import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   Platform,
   Pressable,
-  RefreshControl,
-  ScrollView,
   View,
 } from "react-native";
 import ReactNativeModal from "react-native-modal";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Line } from "react-native-svg";
+import { ROUTES } from "@/constants/AppConstants";
 
 export default function MyVaultFolderScreen() {
   const insets = useSafeAreaInsets();
@@ -33,164 +33,90 @@ export default function MyVaultFolderScreen() {
   const { folder } = useLocalSearchParams<{ folder: string }>();
   const [folderName, setFolderName] = useState<string>("");
 
-  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [addCredentialVisible, setAddCredentialVisible] =
     useState<boolean>(false);
   const [addCredentialType, setAddCredentialType] = useState<
     "login" | "ssh_key"
   >("login");
 
-  const [vaultData, setVaultData] = useState<
-    (DecryptedLoginItem | DecryptedSSHKeyItem)[]
-  >([]);
+  const [vaultData, setVaultData] = useState<DecryptedVaultItem[]>([]);
   const [searchText, setSearchText] = useState<string>("");
   const [dropdownVisible, setDropdownVisible] = useState<{
     [key: string]: boolean;
   }>({});
 
-  const [filteredItems, setFilteredItems] = useState<
-    (DecryptedLoginItem | DecryptedSSHKeyItem)[]
-  >([]);
+  const [filteredItems, setFilteredItems] = useState<DecryptedVaultItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const [selectedItem, setSelectedItem] = useState<
-    DecryptedLoginItem | DecryptedSSHKeyItem
-  >();
+  const [selectedItem, setSelectedItem] = useState<DecryptedVaultItem>();
   const [viewCredentialVisible, setViewCredentialVisible] =
     useState<boolean>(false);
   const [editCredentialVisible, setEditCredentialVisible] =
     useState<boolean>(false);
 
   const { showAlert } = useAlert();
-  const { state } = useAppState();
   const { copyToClipboard } = useClipboard();
 
   const fetchFolderName = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("folders")
-      .select()
-      .eq("id", folder)
-      .single();
-    if (error) return;
-    setFolderName(data.name);
+    try {
+      const user = await getCurrentUser();
+      if (!user) return;
+      
+      const folders = await getFolders(user.id);
+      const currentFolder = folders.find(f => f.id === folder);
+      if (currentFolder) {
+        setFolderName(currentFolder.name);
+      }
+    } catch (error) {
+      console.error('Error fetching folder name:', error);
+    }
   }, [folder]);
 
   const fetchVaultItems = useCallback(async () => {
     try {
       setIsLoading(true);
 
-      const { data: loginsData, error: loginsError } = await supabase
-        .from("logins")
-        .select()
-        .eq("folder_id", folder)
-        .is("deleted_at", null);
-      if (loginsError) return;
-
-      const { data: sshKeysData, error: sshKeysError } = await supabase
-        .from("ssh_keys")
-        .select()
-        .eq("folder_id", folder)
-        .is("deleted_at", null);
-      if (sshKeysError) return;
-
-      const data = [...loginsData, ...sshKeysData];
-
-      const decryptedAndParsedData = await Promise.all(
-        data.map(async (item) => {
-          if (item.encrypted_payload) {
-            if (!state.mnemonic) return;
-
-            const seed = await mnemonicToSeed(state.mnemonic);
-            const derivedKeys = await deriveKeys(seed);
-            const decryptedString = await decryptVault(
-              item.encrypted_payload,
-              derivedKeys
-            );
-            const parsedPayload = JSON.parse(decryptedString);
-
-            if ("username" in parsedPayload) {
-              const loginItem: DecryptedLoginItem = {
-                ...item,
-                item_name: parsedPayload.item_name,
-                username: parsedPayload.username,
-                password: parsedPayload.password,
-                website: parsedPayload.website,
-              };
-              return loginItem;
-            } else if ("public_key" in parsedPayload) {
-              const sshKeyItem: DecryptedSSHKeyItem = {
-                ...item,
-                item_name: parsedPayload.item_name,
-                public_key: parsedPayload.public_key,
-                private_key: parsedPayload.private_key,
-              };
-              return sshKeyItem;
-            }
-          }
-          return item;
-        })
-      );
-      const sortedData = decryptedAndParsedData.sort((a, b) => {
+      // Get items for this folder from vaultManager
+      const folderItems = vaultManager.getItemsForFolder(folder as string);
+      
+      const sortedData = folderItems.sort((a, b) => {
         return a.item_name.localeCompare(b.item_name);
       });
 
-      setVaultData(sortedData as (DecryptedLoginItem | DecryptedSSHKeyItem)[]);
+      setVaultData(sortedData);
     } catch (err) {
       console.error("Failed to load vault items:", err);
       showAlert("Error", "Failed to load vault items. Please try again.");
     } finally {
       setIsLoading(false);
     }
-  }, [folder, showAlert, state.mnemonic]);
+  }, [folder, showAlert]);
 
   useEffect(() => {
-    setIsLoading(true);
-    fetchFolderName();
-    fetchVaultItems().finally(() => setIsLoading(false));
+    const init = async () => {
+      setIsLoading(true);
+      await fetchFolderName();
+      await fetchVaultItems();
+      setIsLoading(false);
+    };
+    init();
   }, [fetchFolderName, fetchVaultItems]);
 
-  const onRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    await fetchVaultItems();
-    setIsRefreshing(false);
-  }, [fetchVaultItems]);
 
   useEffect(() => {
-    const lowercasedSearchText = searchText.toLowerCase();
+    if (!searchText.trim()) {
+      setFilteredItems(vaultData);
+      return;
+    }
+    
+    const query = searchText.toLowerCase();
     const filtered = vaultData.filter((item) => {
-      // 'item' is now correctly typed
-      if (
-        item.item_name &&
-        item.item_name.toLowerCase().includes(lowercasedSearchText)
-      ) {
-        return true;
-      }
-      // Check for type-specific properties
-      if (
-        "username" in item &&
-        item.username &&
-        item.username.toLowerCase().includes(lowercasedSearchText)
-      ) {
-        return true;
-      }
-      if (
-        "website" in item &&
-        item.website &&
-        item.website.toLowerCase().includes(lowercasedSearchText)
-      ) {
-        return true;
-      }
-      if (
-        "public_key" in item &&
-        item.public_key &&
-        item.public_key.toLowerCase().includes(lowercasedSearchText)
-      ) {
-        return true;
-      }
-      return false;
+      return item.item_name?.toLowerCase().includes(query) ||
+        (item.username?.toLowerCase().includes(query)) ||
+        (item.public_key?.toLowerCase().includes(query));
     });
     setFilteredItems(filtered);
-  }, [searchText, vaultData, folder]);
+  }, [searchText, vaultData]);
 
   // Handle dropdown visibility for each item
   const toggleDropdown = (itemId: string) => {
@@ -217,17 +143,12 @@ export default function MyVaultFolderScreen() {
           try {
             if (!selectedItem) return;
 
-            const { error } = await supabase
-              .from("username" in selectedItem ? "logins" : "ssh_keys")
-              .update({ deleted_at: new Date().toISOString() })
-              .eq("id", itemId);
+            // Remove item from vault using vaultManager
+            await vaultManager.deleteVaultItem(selectedItem.folder_id);
 
-            if (error) {
-              throw new Error("Failed to delete item from database.");
-            }
-
+            // Update local state
             setVaultData((prevVaultData) =>
-              prevVaultData.filter((item) => item.id !== itemId)
+              prevVaultData.filter((item) => item.item_name !== selectedItem.item_name)
             );
             showAlert("Success", "Item deleted successfully");
           } catch (error) {
@@ -285,7 +206,7 @@ export default function MyVaultFolderScreen() {
 
         <MenuOption
           onSelect={async () => {
-            await copyToClipboard(item.username, "Username"); // Use item.username directly
+            await copyToClipboard(item.username);
             closeDropdown(item.id);
           }}
         >
@@ -296,7 +217,7 @@ export default function MyVaultFolderScreen() {
 
         <MenuOption
           onSelect={async () => {
-            await copyToClipboard(item.password, "Password"); // Use item.password directly
+            await copyToClipboard(item.password);
             closeDropdown(item.id);
           }}
         >
@@ -319,9 +240,6 @@ export default function MyVaultFolderScreen() {
     </Pressable>
   );
 
-  if (isLoading) {
-    return <View />;
-  }
 
   return (
     <View
@@ -339,7 +257,7 @@ export default function MyVaultFolderScreen() {
         animationInTiming={300}
         animationOutTiming={300}
       >
-        <AddCredential
+        <AddCredentialModal
           itemType={addCredentialType}
           onClose={() => setAddCredentialVisible(false)}
           onRefresh={async () => await fetchVaultItems()}
@@ -357,8 +275,8 @@ export default function MyVaultFolderScreen() {
             animationInTiming={300}
             animationOutTiming={300}
           >
-            <ViewCredential
-              itemType={"username" in selectedItem ? "login" : "ssh_key"}
+            <ViewCredentialModal
+              itemType={selectedItem.username ? "login" : "ssh_key"}
               onClose={() => setViewCredentialVisible(false)}
               onEdit={() => {
                 setViewCredentialVisible(false);
@@ -377,8 +295,8 @@ export default function MyVaultFolderScreen() {
             animationInTiming={300}
             animationOutTiming={300}
           >
-            <EditCredential
-              itemType={"username" in selectedItem ? "login" : "ssh_key"}
+            <EditCredentialModal
+              itemType={selectedItem.username ? "login" : "ssh_key"}
               onClose={() => setEditCredentialVisible(false)}
               onRefresh={async () => await fetchVaultItems()}
               item={selectedItem}
@@ -391,33 +309,22 @@ export default function MyVaultFolderScreen() {
         titleText={folderName}
         leftButtonText="My Vault"
         leftButtonBackImage={true}
+        leftButtonTarget={ROUTES.USER.MY_VAULT.INDEX}
         searchText={searchText}
         onSearchTextChange={setSearchText}
       />
 
-      <ScrollView
-        className="flex-1 px-6 pt-4"
-        refreshControl={
-          Platform.OS !== "web" ? (
-            <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
-          ) : (
-            <></>
-          )
-        }
+      <RefreshableScrollView
+        className="flex-1 px-3 pt-4"
+        onRefresh={fetchVaultItems}
       >
         <ThemedText fontSize={12} fontWeight={800}>
-          ITEMS ({isLoading ? "..." : filteredItems.length})
+          ITEMS ({filteredItems.length})
         </ThemedText>
 
         <Spacer size={4} />
 
-        {isLoading ? (
-          <View className="bg-[#EBEBEB] py-4 px-4 rounded-lg items-center">
-            <ThemedText fontSize={14} className="text-gray-600">
-              Loading items...
-            </ThemedText>
-          </View>
-        ) : filteredItems.length === 0 ? (
+        {filteredItems.length === 0 ? (
           <View className="bg-[#EBEBEB] py-4 px-4 rounded-lg items-center">
             <ThemedText fontSize={14} className="text-gray-600">
               {searchText
@@ -437,9 +344,9 @@ export default function MyVaultFolderScreen() {
         )}
 
         <Spacer size={80} />
-      </ScrollView>
+      </RefreshableScrollView>
       <View className="absolute bottom-0 right-0 px-12 pb-8">
-        <AddItem
+        <AddItemModal
           dropdownVisible={dropdownVisible["add_item"] || false}
           callback={(e) => {
             if (e === "login" || e === "ssh_key") {
@@ -450,6 +357,11 @@ export default function MyVaultFolderScreen() {
           onlyCredential
         />
       </View>
+      
+      <FullScreenLoadingOverlay 
+        visible={isLoading} 
+        text="Loading folder items..." 
+      />
     </View>
   );
 }

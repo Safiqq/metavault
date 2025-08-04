@@ -1,12 +1,11 @@
 import { AddCircleIcon } from "@/assets/images/icons";
 import { Pressable } from "react-native";
-import Spacer from "../../Spacer";
 import { ThemedText } from "../../ThemedText";
 import { DropdownMenu } from "../DropdownMenu";
 import { Line } from "../Line";
 import { MenuOption } from "../MenuOption";
 
-interface AddItemProps {
+interface AddItemModalProps {
   callback: (e: "login" | "ssh_key" | "folder") => void;
   dropdownVisible: boolean;
   setDropdownVisible?: (visible: boolean) => void;
@@ -14,7 +13,7 @@ interface AddItemProps {
   onlyCredential?: boolean;
 }
 
-export const AddItem: React.FC<AddItemProps> = ({
+export const AddItemModal: React.FC<AddItemModalProps> = ({
   callback,
   dropdownVisible,
   setDropdownVisible,

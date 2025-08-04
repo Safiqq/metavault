@@ -9,7 +9,7 @@ export const MenuOption = ({
   children: ReactNode;
 }) => {
   return (
-    <TouchableOpacity onPress={onSelect} className="p-1 hover:opacity-60">
+    <TouchableOpacity onPress={onSelect} className="p-1 hover:opacity-50">
       {children}
     </TouchableOpacity>
   );

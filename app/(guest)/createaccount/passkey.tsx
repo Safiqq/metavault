@@ -1,15 +1,14 @@
 import { ScanningIcon } from "@/assets/images/icons";
-import { ProgressSteps } from "@/components/ProgressSteps";
+import { ProgressStepsHeader } from "@/components/ui/ProgressStepsHeader";
 import Spacer from "@/components/Spacer";
 import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/ui/Button";
 import { ROUTES } from "@/constants/AppConstants";
 import { useAlert } from "@/contexts/AlertProvider";
 import { useAppState } from "@/contexts/AppStateProvider";
-import { supabase } from "@/lib/supabase";
-import { APP_STATES } from "@/lib/types";
+import { AUTH_NL_STATES } from "@/lib/types";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Platform, ScrollView, View } from "react-native";
 import * as passkey from "react-native-passkeys";
 import {
@@ -17,51 +16,26 @@ import {
   RegistrationResponseJSON,
 } from "react-native-passkeys/src/ReactNativePasskeys.types";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  getWebAuthnRegisterOptions,
+  verifyWebAuthnRegistration,
+} from "@/lib/supabase/functions";
 // import { startRegistration } from "@simplewebauthn/browser";
 
 // PasskeyAuthenticationScreen: Handles passkey registration for passwordless authentication.
 export default function PasskeyAuthenticationScreen() {
   const insets = useSafeAreaInsets();
   // isProcessing now handles fetching options and verifying the passkey
-  const [isProcessing, setIsProcessing] = useState<boolean>(true);
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
   // State to hold the registration options fetched from the server
-  const [passkeyRequest, setPasskeyRequest] =
-    useState<PublicKeyCredentialCreationOptionsJSON | null>(null);
 
   const { showAlert } = useAlert();
   const { state, setState } = useAppState();
 
-  // Fetch registration options from the server on mount
-  useEffect(() => {
-    const fetchRegistrationOptions = async () => {
-      setIsProcessing(true);
-      try {
-        // Invoke the Supabase Edge Function to get registration options
-        const { data, error } = await supabase.functions.invoke(
-          "webauthn-register-options"
-        );
-
-        if (error) {
-          throw error;
-        }
-
-        setPasskeyRequest(data);
-      } catch (error: any) {
-        showAlert(
-          "Setup Error",
-          error.message ||
-            "Could not prepare for Passkey registration. Please try again."
-        );
-      } finally {
-        setIsProcessing(false);
-      }
-    };
-
-    fetchRegistrationOptions();
-  }, [state.email]); // Rerun if email changes
-
   // Handles passkey registration and server verification
   const handleRegisterPasskey = async () => {
+    const passkeyRequest: PublicKeyCredentialCreationOptionsJSON =
+      await getWebAuthnRegisterOptions();
     if (!passkeyRequest) {
       showAlert(
         "Error",
@@ -76,34 +50,33 @@ export default function PasskeyAuthenticationScreen() {
       const result: RegistrationResponseJSON | null = await passkey.create(
         passkeyRequest
       );
-
-      // 2. Verify the passkey with the server
-      const { error: verificationError } = await supabase.functions.invoke(
-        "webauthn-verify-registration",
-        { body: { data: result } }
-      );
-
-      if (verificationError) {
-        throw verificationError;
+      if (!result) {
+        throw new Error();
       }
 
-      showAlert(
-        "Success!",
-        "A Passkey has been successfully registered for MetaVault on this device.",
-        [
-          {
-            text: "Continue",
-            onPress: () => {
-              setState({
-                ...state,
-                currentState: APP_STATES.CREATE_ACCOUNT_PASSKEY_VERIFIED,
-                passkeyVerified: true,
-              });
-              router.push(ROUTES.GUEST.CREATE_ACCOUNT.SECURE_VAULT);
+      // 2. Verify the passkey with the server
+      const verification = await verifyWebAuthnRegistration(result);
+
+      if (verification.status) {
+        showAlert(
+          "Success!",
+          "A Passkey has been successfully registered for MetaVault on this device.",
+          [
+            {
+              text: "Continue",
+              onPress: () => {
+                setState({
+                  ...state,
+                  currentState: AUTH_NL_STATES.PASSKEY_VERIFIED,
+                });
+                router.push(ROUTES.GUEST.CREATE_ACCOUNT.SECURE_VAULT);
+              },
             },
-          },
-        ]
-      );
+          ]
+        );
+      } else {
+        throw new Error("Server could not verify the authentication.");
+      }
     } catch (error: any) {
       // Handle cancellation or device-side errors from Passkey.create()
       if (
@@ -135,7 +108,7 @@ export default function PasskeyAuthenticationScreen() {
       }`}
     >
       <ScrollView className="flex-1 px-12">
-        <ProgressSteps currentStep={2} />
+        <ProgressStepsHeader currentStep={2} />
         <View className="my-10">
           <ScanningIcon width={60} height={60} />
 

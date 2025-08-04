@@ -9,7 +9,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { Modal, View } from "react-native";
+import { Modal, Platform, View } from "react-native";
 
 /**
  * Defines a button for the blocking alert dialog.
@@ -124,21 +124,20 @@ const AlertDialog: React.FC<AlertDialogProps> = ({
       statusBarTranslucent={true}
     >
       {/* Dark backdrop overlay */}
-      <View className="flex-1 bg-black/25 items-center justify-center px-6">
+      <View
+        className={`flex-1 w-full items-center justify-center ${
+          Platform.OS === "web" && "max-w-2xl mx-auto"
+        }`}
+        style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+      >
         {/* Prevent backdrop tap from closing modal by using a non-pressable wrapper */}
-        <View className="w-full max-w-2xl px-12">
+        <View className="w-4/5 max-w-md mx-6">
           {/* Main alert container */}
           <View className="bg-white rounded-xl shadow-2xl">
             {/* Content area */}
-            <View className="px-6">
-              <Spacer size={24} />
-
+            <View className="px-6 py-5">
               {/* Title */}
-              <ThemedText
-                fontSize={18}
-                fontWeight={700}
-                className="text-center text-black"
-              >
+              <ThemedText fontWeight={700} className="text-center text-black">
                 {title}
               </ThemedText>
 
@@ -146,7 +145,7 @@ const AlertDialog: React.FC<AlertDialogProps> = ({
 
               {/* Message */}
               <ThemedText
-                fontSize={15}
+                fontSize={14}
                 className="text-center text-gray-700 leading-6"
               >
                 {message}
@@ -154,8 +153,6 @@ const AlertDialog: React.FC<AlertDialogProps> = ({
 
               {/* Buttons */}
               {renderButtons}
-
-              <Spacer size={20} />
             </View>
           </View>
         </View>

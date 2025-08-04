@@ -1,4 +1,3 @@
-// LandingScreen: Entry point for guests to import or create a vault.
 import { router } from "expo-router";
 import React from "react";
 import { Platform, ScrollView, View } from "react-native";
@@ -14,9 +13,21 @@ import { ROUTES } from "@/constants/AppConstants";
 export default function LandingScreen() {
   const insets = useSafeAreaInsets();
 
+  // const { state, setSignedOutState } = useAppState();
+
   const handleImportVault = () => router.push(ROUTES.GUEST.RECOVER_VAULT);
+  const handleLogin = () => router.push(ROUTES.GUEST.LOGIN);
   const handleCreateVault = () =>
     router.push(ROUTES.GUEST.CREATE_ACCOUNT.GET_STARTED);
+
+  // useEffect(() => {
+  //   if (
+  //     state.authState === AUTH_STATES.NOT_LOGGED_IN &&
+  //     state.currentState === AUTH_NL_STATES.NEED_CLEAR_STATE_AS_SIGNED_OUT
+  //   ) {
+  //     setSignedOutState();
+  //   }
+  // }, []);
 
   return (
     <View
@@ -30,18 +41,15 @@ export default function LandingScreen() {
         <View className="flex-1 justify-center items-center py-10">
           <StrongboxIcon2 width={160} height={160} />
           <Spacer size={24} />
-          <ThemedText 
-            fontSize={28} 
-            fontWeight={700} 
+          <ThemedText
+            fontSize={28}
+            fontWeight={700}
             className="text-center text-black"
           >
             Vault setup
           </ThemedText>
           <Spacer size={16} />
-          <ThemedText 
-            fontSize={16} 
-            className="text-center text-gray-600 px-4"
-          >
+          <ThemedText fontSize={16} className="text-center text-gray-600 px-4">
             Import an existing vault or create a new one
           </ThemedText>
         </View>
@@ -53,6 +61,7 @@ export default function LandingScreen() {
           onPress={handleImportVault}
           fontWeight={700}
         />
+        <Button text="Login" type="secondary" onPress={handleLogin} />
         <Button
           text="Create a new vault"
           type="secondary"

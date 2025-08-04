@@ -9,7 +9,7 @@ import { GeneratorPassphrase } from "@/components/ui/Generator/Passphrase";
 import { GeneratorPassword } from "@/components/ui/Generator/Password";
 import { GeneratorUsername } from "@/components/ui/Generator/Username";
 import { MenuOption } from "@/components/ui/MenuOption";
-import { PasswordHistory } from "@/components/ui/Modal/PasswordHistory";
+import { PasswordHistoryModal } from "@/components/ui/Modal/PasswordHistoryModal";
 import React, { useState } from "react";
 import ReactNativeModal from "react-native-modal";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,10 +23,9 @@ export default function GeneratorScreen() {
 
   return (
     <View
-      style={{ 
-        paddingTop: insets.top, 
-        paddingBottom: insets.bottom,
-        backgroundColor: "white"
+      style={{
+        paddingTop: insets.top,
+        backgroundColor: "white",
       }}
       className={`flex-1 w-full ${
         Platform.OS === "web" && "max-w-2xl mx-auto"
@@ -45,7 +44,7 @@ export default function GeneratorScreen() {
         animationInTiming={300}
         animationOutTiming={300}
       >
-        <PasswordHistory callback={() => setSettingsVisible(false)} />
+        <PasswordHistoryModal callback={() => setSettingsVisible(false)} />
       </ReactNativeModal>
 
       <View className="p-6 pb-5 border-b border-[#EBEBEB]">

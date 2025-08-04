@@ -1,5 +1,3 @@
-// App-wide constants for better maintainability
-
 export const APP_CONSTANTS = {
   // Session timeout settings
   DEFAULT_SESSION_TIMEOUT: 15 * 60, // 15 minutes in seconds
@@ -34,6 +32,7 @@ export const ROUTES = {
   GUEST: {
     LANDING: "/landing",
     RECOVER_VAULT: "/recovervault",
+    LOGIN: "/login",
     CREATE_ACCOUNT: {
       INDEX: "/createaccount",
       GET_STARTED: "/createaccount/getstarted",
@@ -42,10 +41,10 @@ export const ROUTES = {
       SECURE_VAULT: "/createaccount/securevault",
       SEED_PHRASE: {
         INDEX: "/createaccount/seedphrase",
-        VERIFY: "/createaccount/seedphrase/verify"
+        VERIFY: "/createaccount/seedphrase/verify",
       },
-      CONGRATS: "/createaccount/congrats",
     },
+    CONGRATS: "/congrats",
   },
   USER: {
     MY_VAULT: {

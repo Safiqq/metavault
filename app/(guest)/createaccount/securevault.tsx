@@ -1,8 +1,7 @@
-// SecureVaultScreen: Informs user to secure their vault with a Seed Phrase.
 import { Platform, Pressable, ScrollView, View } from "react-native";
 
 import { SecuritySafeIcon } from "@/assets/images/icons";
-import { ProgressSteps } from "@/components/ProgressSteps";
+import { ProgressStepsHeader } from "@/components/ui/ProgressStepsHeader";
 import Spacer from "@/components/Spacer";
 import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/ui/Button";
@@ -51,7 +50,7 @@ export default function SecureVaultScreen() {
       </ReactNativeModal>
 
       <ScrollView className="flex-1 px-12">
-        <ProgressSteps currentStep={3} />
+        <ProgressStepsHeader currentStep={3} />
         {isFirstPage ? (
           <View className="my-10">
             <ThemedText fontWeight={700} fontSize={24} className="text-center">

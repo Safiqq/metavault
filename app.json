@@ -19,7 +19,21 @@
       },
       "edgeToEdgeEnabled": true,
       "permissions": ["android.permission.NFC"],
-      "package": "com.safiqq.passwordmanager"
+      "package": "com.safiqq.passwordmanager",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "*.expo.app",
+              "pathPrefix": "/records"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",

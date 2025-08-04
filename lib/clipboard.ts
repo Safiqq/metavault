@@ -1,7 +1,7 @@
 import * as Clipboard from "expo-clipboard";
 
 export const useClipboard = () => {
-  const copyToClipboard = async (text: string, type: string) => {
+  const copyToClipboard = async (text: string) => {
     await Clipboard.setStringAsync(text);
   };
 

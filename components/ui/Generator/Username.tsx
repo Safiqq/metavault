@@ -93,7 +93,7 @@ export function GeneratorUsername() {
       return;
     }
 
-    copyToClipboard(generatedUsername, "Username");
+    copyToClipboard(generatedUsername);
     setState({
       ...state,
       generatorData: [
@@ -187,10 +187,14 @@ export function GeneratorUsername() {
               <ThemedText fontSize={12} fontWeight={800}>
                 Email address
               </ThemedText>
+
+              <Spacer size={4} />
+              
               <ThemedTextInput
                 fontSize={14}
-                className="flex-1 outline-none"
+                className="outline-none text-black"
                 placeholder="Enter your email address"
+                placeholderTextColor="#9CA3AF"
                 value={usernameGeneratorStates.email}
                 onChangeText={(text) =>
                   setUsernameGeneratorStates((prev) => ({

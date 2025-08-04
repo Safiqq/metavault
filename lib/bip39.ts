@@ -4,9 +4,12 @@ import { hmac } from "@noble/hashes/hmac";
 import { hkdf } from "@noble/hashes/hkdf";
 import { pbkdf2Async } from "@noble/hashes/pbkdf2";
 import { sha256, sha512 } from "@noble/hashes/sha2";
-// import AesGcmCrypto, { EncryptedData } from "react-native-aes-gcm-crypto";
 import aesjs from "aes-js";
 import { Buffer } from "buffer";
+
+// =============================================================================
+// GENERAL FUNCTIONS
+// =============================================================================
 
 // Cache the wordlist
 let wordlistCache: string[] | null = null;
@@ -16,17 +19,8 @@ let wordlistCache: string[] | null = null;
  */
 export function loadWordlist(): string[] {
   if (wordlistCache) return wordlistCache;
-
   wordlistCache = BIP39_WORDLISTS;
-
   return wordlistCache;
-}
-
-/**
- * Secure random bytes
- */
-function getRandomBytes(length: number): Uint8Array {
-  return Crypto.getRandomValues(new Uint8Array(length));
 }
 
 /**
@@ -44,11 +38,24 @@ function bytesToBinary(bytes: Uint8Array): string {
 async function digestSha256(data: Uint8Array): Promise<Uint8Array> {
   const digest = await Crypto.digestStringAsync(
     Crypto.CryptoDigestAlgorithm.SHA256,
-    Array.from(data).map(b => String.fromCharCode(b)).join(''),
+    Array.from(data)
+      .map((b) => String.fromCharCode(b))
+      .join(""),
     { encoding: Crypto.CryptoEncoding.BASE64 }
   );
-  return new Uint8Array(Buffer.from(digest, 'base64'));
+  return new Uint8Array(Buffer.from(digest, "base64"));
 }
+
+/**
+ * Generate secure random bytes
+ */
+function getRandomBytes(length: number): Uint8Array {
+  return Crypto.getRandomValues(new Uint8Array(length));
+}
+
+// =============================================================================
+// MNEMONIC GENERATION
+// =============================================================================
 
 /**
  * Generate mnemonic
@@ -61,8 +68,9 @@ export async function generateMnemonic(entropyBits = 128): Promise<string[]> {
 
   const ENT = entropyBits;
   const CS = ENT / 32;
+  const length = ENT / 8; // Convert bits to bytes
 
-  const entropy = getRandomBytes(ENT / 8);
+  const entropy = getRandomBytes(length);
   const hash = await digestSha256(entropy);
 
   const entropyBinary = bytesToBinary(entropy);
@@ -88,7 +96,7 @@ export async function generateMnemonic(entropyBits = 128): Promise<string[]> {
  */
 export async function validateMnemonic(words: string[]): Promise<boolean> {
   if (!words || !Array.isArray(words)) return false;
-  
+
   const wordlist = loadWordlist();
   const wordCount = words.length;
   const validWordCounts = [12, 15, 18, 21, 24];
@@ -122,8 +130,12 @@ export async function validateMnemonic(words: string[]): Promise<boolean> {
   return actualChecksumBits === checksumBits;
 }
 
+// =============================================================================
+// MNEMONIC TO SEED
+// =============================================================================
+
 /**
- * Convert mnemonic to seed using PBKDF2-HMAC-SHA512
+ * Convert mnemonic to seed using PBKDF2-HMAC-SHA512 (BIP39 standard)
  */
 export async function mnemonicToSeed(
   words: string[],
@@ -137,61 +149,170 @@ export async function mnemonicToSeed(
   const saltBytes = encoder.encode(salt);
 
   return await pbkdf2Async(sha512, mnemonicBytes, saltBytes, {
-    c: 2048,
-    dkLen: 64,
+    c: 2048, // BIP39 standard iterations
+    dkLen: 64, // 512 bits
   });
 }
 
-/**
- * Derives an encryption key from the master seed using HKDF from @noble/hashes.
- * Returns the raw key as a Uint8Array.
- */
-export async function deriveKeys(
-  seed: Uint8Array
-): Promise<{ encryptionKey: Uint8Array; macKey: Uint8Array }> {
-  const info = new TextEncoder().encode("vault-keys");
-  const salt = new Uint8Array(); // Salt can be empty for HKDF
+// =============================================================================
+// SEED TO MASTER KEY
+// =============================================================================
 
-  // Derive 64 bytes in total: 32 for encryption, 32 for authentication
-  const derivedKey = hkdf(sha256, seed, salt, info, 64); // 64 bytes = 512 bits
+/**
+ * Derive master key from seed using PBKDF2 for additional security
+ * This adds an extra layer of protection specific to your password manager
+ */
+export async function seedToMasterKey(
+  seed: Uint8Array,
+  email: string
+): Promise<Uint8Array> {
+  // Create salt from user email
+  const encoder = new TextEncoder();
+  const salt = encoder.encode(`vault-salt-v1-${email}`);
+
+  const masterKey = await pbkdf2Async(sha256, seed, salt, {
+    c: 100000, // 100k default for mobile performance
+    dkLen: 64, // 512 bits output
+  });
+
+  return masterKey;
+}
+
+/**
+ * Derive master key from seed only (for vault ID generation)
+ * This creates a consistent vault ID based only on the seed phrase
+ */
+export async function seedToMasterKeyForVaultId(
+  seed: Uint8Array
+): Promise<Uint8Array> {
+  // Create salt without user email for consistent vault ID
+  const encoder = new TextEncoder();
+  const salt = encoder.encode(`vault-id-salt-v1`);
+
+  const masterKey = await pbkdf2Async(sha256, seed, salt, {
+    c: 100000, // 100k default for mobile performance
+    dkLen: 64, // 512 bits output
+  });
+
+  return masterKey;
+}
+
+// =============================================================================
+// MASTER KEY TO KEYS (ENCRYPTION, MAC, AND VAULTID)
+// =============================================================================
+
+/**
+ * Derives encryption and MAC keys from the master key using HKDF
+ * This provides cryptographic key separation
+ */
+export async function deriveKeysFromMasterKey(masterKey: Uint8Array): Promise<{
+  encryptionKey: Uint8Array;
+  macKey: Uint8Array;
+}> {
+  // Use HKDF for key derivation from master key
+  const encryptionInfo = new TextEncoder().encode("vault-encryption-v1");
+  const macInfo = new TextEncoder().encode("vault-mac-v1");
+  const salt = new Uint8Array(); // Empty salt for HKDF
+
+  // Derive separate keys for different purposes
+  const encryptionKey = hkdf(sha256, masterKey, salt, encryptionInfo, 32);
+  const macKey = hkdf(sha256, masterKey, salt, macInfo, 32);
 
   return {
-    encryptionKey: derivedKey.slice(0, 32),
-    macKey: derivedKey.slice(32, 64),
+    encryptionKey,
+    macKey,
   };
 }
 
 /**
- * Creates a SHA-256 hash of a key.
+ * Derives vault ID using HKDF
  */
-export async function createHashedSecret(seed: Uint8Array): Promise<string> {
-  const hashBuffer = await Crypto.digest(
-    Crypto.CryptoDigestAlgorithm.SHA256,
-    seed
-  );
-  return Buffer.from(hashBuffer).toString("hex");
+export async function deriveVaultIdFromMasterKey(
+  masterKey: Uint8Array
+): Promise<string> {
+  // Use HKDF for key derivation from master key
+  const vaultIdInfo = new TextEncoder().encode("vault-id-v1");
+  const salt = new Uint8Array(); // Empty salt for HKDF
+
+  // Derive vault ID for vault recovery
+  const vaultIdSeed = hkdf(sha256, masterKey, salt, vaultIdInfo, 32);
+
+  // Generate vault ID from seed
+  const vaultIdHash = sha256(vaultIdSeed);
+  const vaultId = Buffer.from(vaultIdHash)
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+
+  return vaultId;
 }
 
+// =============================================================================
+// DERIVE ALL KEYS
+// =============================================================================
+
+/**
+ * Complete key derivation flow: mnemonic → seed → master key → keys
+ */
+export async function deriveVaultKeys(
+  words: string[],
+  email: string,
+  passphrase = ""
+): Promise<{
+  encryptionKey: Uint8Array;
+  macKey: Uint8Array;
+  vaultId: string;
+}> {
+  // Step 1: Mnemonic to seed (BIP39)
+  const seed = await mnemonicToSeed(words, passphrase);
+
+  // Step 2: Seed to master key (App-specific PBKDF2) - still uses email for encryption keys
+  const masterKey = await seedToMasterKey(seed, email);
+  // Step 3: Seed to vault ID master key (seed-only for consistent vault ID)
+  const vaultIdMasterKey = await seedToMasterKeyForVaultId(seed);
+
+  // Step 4: Master key to functional keys (HKDF)
+  const encryptionMacKeys = await deriveKeysFromMasterKey(masterKey);
+  // Step 5: Vault ID master key to vault ID (HKDF)
+  const vaultId = await deriveVaultIdFromMasterKey(vaultIdMasterKey);
+
+  return {
+    encryptionKey: encryptionMacKeys.encryptionKey,
+    macKey: encryptionMacKeys.macKey,
+    vaultId: vaultId,
+  };
+}
+
+// =============================================================================
+// ENCRYPTION AND DECRYPTION
+// =============================================================================
+
+/**
+ * Encrypt vault data using AES-CTR + HMAC-SHA256 (Encrypt-then-MAC)
+ */
 export async function encryptVault(
   vaultData: string,
   keys: { encryptionKey: Uint8Array; macKey: Uint8Array }
 ): Promise<string> {
-  const iv = getRandomBytes(16); // IV for CTR is typically the block size (16 bytes)
+  const iv = getRandomBytes(16); // 128-bit IV for CTR mode
   const textBytes = aesjs.utils.utf8.toBytes(vaultData);
 
+  // Encrypt with AES-CTR
   const aesCtr = new aesjs.ModeOfOperation.ctr(
     keys.encryptionKey,
     new aesjs.Counter(iv)
   );
   const encryptedBytes = aesCtr.encrypt(textBytes);
 
+  // Create MAC over IV + ciphertext
   const dataToAuthenticate = Buffer.concat([
     Buffer.from(iv),
     Buffer.from(encryptedBytes),
   ]);
   const mac = hmac(sha256, keys.macKey, dataToAuthenticate);
 
-  // Format: iv(hex) + ciphertext(hex) + mac(hex)
+  // Combine: IV + Ciphertext + MAC
   const combined = Buffer.concat([
     Buffer.from(iv),
     Buffer.from(encryptedBytes),
@@ -202,7 +323,44 @@ export async function encryptVault(
 }
 
 /**
- * Compares two Uint8Arrays in constant time to prevent timing attacks.
+ * Decrypt the password vault using AES-CTR + HMAC-SHA256
+ */
+export async function decryptVault(
+  encryptedHexString: string,
+  keys: { encryptionKey: Uint8Array; macKey: Uint8Array }
+): Promise<string> {
+  const combined = Buffer.from(encryptedHexString, "hex");
+
+  // Extract components
+  const iv = combined.slice(0, 16);
+  const encryptedBytes = combined.slice(16, combined.length - 32);
+  const receivedMac = combined.slice(combined.length - 32);
+
+  // Verify MAC
+  const dataToAuthenticate = Buffer.concat([iv, encryptedBytes]);
+  const expectedMac = hmac(sha256, keys.macKey, dataToAuthenticate);
+
+  // Timing-safe MAC comparison
+  const macIsValid = timingSafeEqual(receivedMac, expectedMac);
+
+  if (!macIsValid) {
+    throw new Error(
+      "Decryption failed: Invalid MAC. The data has been tampered with or is corrupted."
+    );
+  }
+
+  // Decrypt with AES-CTR
+  const aesCtr = new aesjs.ModeOfOperation.ctr(
+    keys.encryptionKey,
+    new aesjs.Counter(iv)
+  );
+  const decryptedBytes = aesCtr.decrypt(encryptedBytes);
+
+  return aesjs.utils.utf8.fromBytes(decryptedBytes);
+}
+
+/**
+ * Compares two Uint8Arrays in constant time to prevent timing attacks
  */
 function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) {
@@ -222,35 +380,27 @@ function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
 }
 
 /**
- * Decrypts the password vault using AES-CTR + HMAC-SHA256 (Encrypt-then-MAC).
+ * Example usage flow (development only)
  */
-export async function decryptVault(
-  encryptedHexString: string,
-  keys: { encryptionKey: Uint8Array; macKey: Uint8Array }
-): Promise<string> {
-  const combined = Buffer.from(encryptedHexString, "hex");
+// export async function exampleUsage() {
+//   // 1. Generate mnemonic
+//   const words = await generateMnemonic(128); // 12 words
 
-  const iv = combined.slice(0, 16);
-  const encryptedBytes = combined.slice(16, combined.length - 32);
-  const receivedMac = combined.slice(combined.length - 32);
+//   // 2. Validate mnemonic
+//   const isValid = await validateMnemonic(words);
 
-  const dataToAuthenticate = Buffer.concat([iv, encryptedBytes]);
-  const expectedMac = hmac(sha256, keys.macKey, dataToAuthenticate);
+//   // 3. Derive all keys
+//   const email = "user@example.com";
+//   const keys = await deriveVaultKeys(words, email);
 
-  // Use a timing-safe comparison to prevent timing attacks
-  const macIsValid = timingSafeEqual(receivedMac, expectedMac);
+//   // 4. Encrypt data
+//   const passwords = JSON.stringify({
+//     "gmail.com": { username: "user", password: "pass123" },
+//     "facebook.com": { username: "user", password: "pass456" },
+//   });
 
-  if (!macIsValid) {
-    throw new Error(
-      "Decryption failed: Invalid MAC. The data has been tampered with or is corrupted."
-    );
-  }
+//   const encrypted = await encryptVault(passwords, keys);
 
-  const aesCtr = new aesjs.ModeOfOperation.ctr(
-    keys.encryptionKey,
-    new aesjs.Counter(iv)
-  );
-  const decryptedBytes = aesCtr.decrypt(encryptedBytes);
-
-  return aesjs.utils.utf8.fromBytes(decryptedBytes);
-}
+//   // 5. Decrypt data
+//   const decrypted = await decryptVault(encrypted, keys);
+// }

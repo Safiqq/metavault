@@ -1,5 +1,4 @@
-// NotFoundScreen: Shown when a user navigates to a route that doesn't exist.
-import { Link, router, Stack } from "expo-router";
+import { router, Stack } from "expo-router";
 import { View } from "react-native";
 
 import Spacer from "@/components/Spacer";

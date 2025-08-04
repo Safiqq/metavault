@@ -8,6 +8,7 @@ import { Line } from "@/components/ui/Line";
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ROUTES } from "@/constants/AppConstants";
 
 export default function MyVaultNameScreen() {
   const insets = useSafeAreaInsets();
@@ -18,12 +19,15 @@ export default function MyVaultNameScreen() {
   return (
     <View
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
-      className={`flex-1 w-full ${Platform.OS === "web" && "max-w-2xl mx-auto"}`}
+      className={`flex-1 w-full ${
+        Platform.OS === "web" && "max-w-2xl mx-auto"
+      }`}
     >
       <Header
         titleText={name}
         leftButtonText="My Vault"
         leftButtonBackImage={true}
+        leftButtonTarget={ROUTES.USER.MY_VAULT.INDEX}
         searchText={searchText}
         onSearchTextChange={setSearchText}
       />

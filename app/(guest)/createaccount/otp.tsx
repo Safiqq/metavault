@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Platform, Pressable, ScrollView, TextInput, View } from "react-native";
 
 import { DevicesIcon } from "@/assets/images/icons";
-import { ProgressSteps } from "@/components/ProgressSteps";
+import { ProgressStepsHeader } from "@/components/ui/ProgressStepsHeader";
 import Spacer from "@/components/Spacer";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedTextInput } from "@/components/ThemedTextInput";
@@ -12,7 +12,7 @@ import { ROUTES } from "@/constants/AppConstants";
 import { useAlert } from "@/contexts/AlertProvider";
 import { useAppState } from "@/contexts/AppStateProvider";
 import { supabase } from "@/lib/supabase";
-import { APP_STATES } from "@/lib/types";
+import { AUTH_NL_STATES } from "@/lib/types";
 import { router } from "expo-router";
 import ReactNativeModal from "react-native-modal";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -129,8 +129,7 @@ export default function CreateAccountScreen() {
           onPress: () => {
             setState({
               ...state,
-              currentState: APP_STATES.CREATE_ACCOUNT_OTP_VERIFIED,
-              emailVerified: true,
+              currentState: AUTH_NL_STATES.OTP_VERIFIED,
             });
             router.push(ROUTES.GUEST.CREATE_ACCOUNT.PASSKEY);
           },
@@ -168,7 +167,7 @@ export default function CreateAccountScreen() {
       </ReactNativeModal>
 
       <ScrollView className="flex-1 px-12">
-        <ProgressSteps currentStep={1} />
+        <ProgressStepsHeader currentStep={1} />
         <View className="my-10">
           <DevicesIcon width={60} height={60} />
 

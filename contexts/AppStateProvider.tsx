@@ -1,20 +1,23 @@
 import { APP_CONSTANTS } from "@/constants/AppConstants";
 import { loadState, saveState } from "@/lib/appState";
-import { APP_STATES, StoreStates } from "@/lib/types";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { AUTH_NL_STATES, AUTH_STATES, StoreStates } from "@/lib/types";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 export const defaultState: StoreStates = {
-  currentState: APP_STATES.NOT_LOGGED_IN,
+  authState: AUTH_STATES.NOT_LOGGED_IN,
+  currentState: AUTH_NL_STATES.IDLE,
 
   email: "",
-  emailVerified: false,
-  name: "",
   mnemonic: [],
-  mnemonicVerified: false,
-  passkeyVerified: false,
 
   generatorData: [],
-  vaultData: [],
 
   lastMnemonicVerification: "",
   lastSessionRenewal: "",
@@ -28,11 +31,13 @@ interface AppStateContextType {
   state: StoreStates;
   setState: React.Dispatch<React.SetStateAction<StoreStates>>;
   isLoading: boolean;
-  error: string | null;
   resetState: () => void;
+  setSignedOutState: () => void;
 }
 
-const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
+const AppStateContext = createContext<AppStateContextType | undefined>(
+  undefined
+);
 
 export const useAppState = (): AppStateContextType => {
   const context = useContext(AppStateContext);
@@ -47,20 +52,16 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [state, setState] = useState<StoreStates>(defaultState);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Effect to load state on app start
   useEffect(() => {
     const hydrateState = async () => {
       try {
-        setError(null);
         const persistedState = await loadState();
         if (persistedState) {
           setState((prevState) => ({ ...prevState, ...persistedState }));
         }
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "Failed to load app state";
-        setError(errorMessage);
         console.error("App state load error:", err);
       } finally {
         setIsLoading(false);
@@ -78,28 +79,43 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({
         try {
           await saveState(state);
         } catch (err) {
-          const errorMessage = err instanceof Error ? err.message : "Failed to save app state";
-          setError(errorMessage);
           console.error("App state save error:", err);
         }
       };
-      
+
       saveStateAsync();
     }
   }, [state, isLoading]);
 
   const resetState = useCallback(() => {
     setState(defaultState);
-    setError(null);
   }, []);
 
-  const contextValue = useMemo<AppStateContextType>(() => ({
-    state,
-    setState,
-    isLoading,
-    error,
-    resetState,
-  }), [state, isLoading, error, resetState]);
+  const setSignedOutState = useCallback(() => {
+    setState((prevState) => ({
+      authState: AUTH_STATES.NOT_LOGGED_IN,
+      currentState: AUTH_NL_STATES.IDLE,
+      email: "",
+      mnemonic: prevState.mnemonic, // Use prevState
+      generatorData: [],
+      lastMnemonicVerification: "",
+      lastSessionRenewal: "",
+      askMnemonicEvery: prevState.askMnemonicEvery, // Use prevState
+      sessionTimeout: prevState.sessionTimeout, // Use prevState
+      sessionTimeoutAction: prevState.sessionTimeoutAction, // Use prevState
+    }));
+  }, []);
+
+  const contextValue = useMemo<AppStateContextType>(
+    () => ({
+      state,
+      setState,
+      isLoading,
+      resetState,
+      setSignedOutState,
+    }),
+    [state, isLoading, resetState, setSignedOutState]
+  );
 
   // Prevent rendering children until hydration is complete
   if (isLoading) {

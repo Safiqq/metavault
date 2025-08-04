@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, PanResponder, Pressable } from 'react-native';
+import { View, PanResponder, Pressable, useWindowDimensions, ViewStyle } from 'react-native';
 import { AddCircleIcon, MinusCircleIcon } from '@/assets/images/icons';
 
 interface SliderProps {
@@ -8,7 +8,7 @@ interface SliderProps {
   maximumValue: number;
   onValueChange: (value: number) => void;
   step?: number;
-  style?: any;
+  style?: ViewStyle;
 }
 
 export function Slider({
@@ -19,7 +19,8 @@ export function Slider({
   step = 1,
   style,
 }: SliderProps) {
-  const sliderWidth = 400; // Increased width for better usability
+  const { width: screenWidth } = useWindowDimensions();
+  const sliderWidth = Math.min(screenWidth - 140, 280); // Responsive width with more margin for mobile
   const trackHeight = 4;
   const thumbSize = 20;
   
@@ -110,11 +111,6 @@ export function Slider({
             borderRadius: thumbSize / 2,
             borderWidth: 2,
             borderColor: '#FFFFFF',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.2,
-            shadowRadius: 2,
-            elevation: 3,
           }}
         />
       </View>

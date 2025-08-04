@@ -10,11 +10,11 @@ import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/ui/Button";
 import { ROUTES } from "@/constants/AppConstants";
 import { useAlert } from "@/contexts/AlertProvider";
-import { defaultState, useAppState } from "@/contexts/AppStateProvider";
+import { useAppState } from "@/contexts/AppStateProvider";
 import { useAuth } from "@/contexts/AuthProvider";
 import { webStorage } from "@/lib/largeSecureStore";
 import { supabase } from "@/lib/supabase";
-import { APP_STATES } from "@/lib/types";
+import { AUTH_STATES, AUTH_L_STATES, AUTH_NL_STATES } from "@/lib/types";
 import Constants from "expo-constants";
 import * as Crypto from "expo-crypto";
 import * as Device from "expo-device";
@@ -23,14 +23,16 @@ import {
   PublicKeyCredentialRequestOptionsJSON,
   AuthenticationResponseJSON,
 } from "react-native-passkeys/src/ReactNativePasskeys.types";
+import {
+  getWebAuthnAuthenticateOptions,
+  verifyWebAuthnAuthentication,
+} from "@/lib/supabase/functions";
 
 // LockedScreen: Handles unlocking the vault using passkey authentication and session renewal.
 export default function LockedScreen() {
   const insets = useSafeAreaInsets();
 
-  const [isProcessing, setIsProcessing] = useState<boolean>(true);
-  const [passkeyRequest, setPasskeyRequest] =
-    useState<PublicKeyCredentialRequestOptionsJSON | null>(null);
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [userAgent, setUserAgent] = useState<string>("");
   const [ipAddress, setIpAddress] = useState<string>("");
   const [deviceId, setDeviceId] = useState<string | null>(
@@ -48,55 +50,24 @@ export default function LockedScreen() {
       setIpAddress(await Network.getIpAddressAsync());
     };
 
-    const fetchVerificationOptions = async () => {
-      setIsProcessing(true);
-      try {
-        // Invoke the Supabase Edge Function to get verification options
-        const { data, error } = await supabase.functions.invoke(
-          "webauthn-authenticate-options"
-        );
-
-        if (error) {
-          throw error;
-        }
-
-        setPasskeyRequest(data);
-      } catch (error: any) {
-        showAlert(
-          "Setup Error",
-          error.message ||
-            "Could not prepare for Passkey verification. Please try again."
-        );
-      } finally {
-        setIsProcessing(false);
-      }
-    };
-
     if (!deviceId) {
       webStorage.setItem("device_id", Crypto.randomUUID());
       setDeviceId(webStorage.getItem("device_id"));
     }
 
     getData();
-    fetchVerificationOptions();
-  }, [deviceId]);
+  }, [deviceId, showAlert]);
 
   // Handles passkey authentication and session renewal
   const handleUnlock = async () => {
-    if (!passkeyRequest) {
-      showAlert(
-        "Error",
-        "Passkey verification options not loaded. Please wait or try again."
-      );
-      return;
-    }
-
     setIsProcessing(true);
     try {
       if (!userAgent || !ipAddress) {
         throw new Error("Unknown error.");
       }
 
+      const passkeyRequest: PublicKeyCredentialRequestOptionsJSON =
+        await getWebAuthnAuthenticateOptions();
       // [3] Use the server's challenge to prompt the user for their passkey.
       const result: AuthenticationResponseJSON | null = await passkey.get(
         passkeyRequest
@@ -107,15 +78,10 @@ export default function LockedScreen() {
       }
 
       // [4] Invoke the 'verify' function to have the server verify the result.
-      const { data: verification, error: verificationError } =
-        await supabase.functions.invoke("webauthn-verify-authentication", {
-          body: { data: result },
-        });
-
-      if (verificationError) throw verificationError;
+      const verification = await verifyWebAuthnAuthentication(result);
 
       // [5] If the server successfully verified the passkey, proceed.
-      if (verification.verified) {
+      if (verification.status) {
         const now = Date.now();
         const lastVerification = new Date(
           state.lastMnemonicVerification
@@ -126,8 +92,8 @@ export default function LockedScreen() {
           ...state,
           currentState:
             elapsedDays >= state.askMnemonicEvery
-              ? APP_STATES.LOGGED_IN_NEED_SEED_PHRASE_VERIFICATION
-              : APP_STATES.LOGGED_IN,
+              ? AUTH_L_STATES.NEED_SEED_PHRASE_VERIFICATION
+              : AUTH_L_STATES.IDLE,
           lastSessionRenewal: new Date().toISOString(),
         });
 
@@ -153,6 +119,20 @@ export default function LockedScreen() {
     }
   };
 
+  useEffect(() => {
+    const logOut = async () => {
+      await supabase.auth.signOut();
+      router.push(ROUTES.ROOT);
+    };
+
+    if (
+      state.authState === AUTH_STATES.NOT_LOGGED_IN &&
+      state.currentState === AUTH_NL_STATES.NEED_CLEAR_STATE_AS_SIGNED_OUT
+    ) {
+      logOut();
+    }
+  }, [state.authState, state.currentState]);
+
   // Handles user logout and session revocation
   const handleLogOut = () => {
     showAlert("Log Out", "Are you sure you want to log out?", [
@@ -160,17 +140,17 @@ export default function LockedScreen() {
       {
         text: "OK",
         onPress: async () => {
+          setState({
+            ...state,
+            authState: AUTH_STATES.NOT_LOGGED_IN,
+            currentState: AUTH_NL_STATES.NEED_CLEAR_STATE_AS_SIGNED_OUT,
+          });
           await supabase
             .from("sessions")
             .update({
               revoked_at: new Date().toISOString(),
             })
             .match({ user_id: user?.id, device_id: deviceId });
-
-          await supabase.auth.signOut();
-          setState(defaultState);
-          router.replace(ROUTES.ROOT);
-          router.dismissAll();
         },
       },
     ]);

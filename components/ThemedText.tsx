@@ -64,17 +64,10 @@ const getFontFamily = (
   try {
     const fontFamily = FONT_FAMILY_MAP[fontStyle]?.[fontWeight];
     if (!fontFamily) {
-      console.error(
-        `Invalid font configuration - weight: ${fontWeight}, style: ${fontStyle}`
-      );
       return FONT_FAMILY_MAP.normal[DEFAULT_FONT_WEIGHT];
     }
     return fontFamily;
-  } catch (error) {
-    console.error(
-      `Invalid font configuration - weight: ${fontWeight}, style: ${fontStyle}`,
-      error
-    );
+  } catch {
     return FONT_FAMILY_MAP.normal[DEFAULT_FONT_WEIGHT];
   }
 };
@@ -121,8 +114,6 @@ const ThemedTextComponent = forwardRef<Text, ThemedTextProps>((props, ref) => {
       ref={ref}
       style={[fontStyles, style]}
       className={className}
-      accessibilityRole="text"
-      accessible={true}
       {...restProps}
     >
       {children}

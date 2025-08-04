@@ -1,5 +1,5 @@
 import { ArrowLeftIcon, SearchNormalIcon } from "@/assets/images/icons";
-import { useRouter } from "expo-router";
+import { Href, useRouter } from "expo-router";
 import React from "react";
 import { Pressable, View } from "react-native";
 import Spacer from "../Spacer";
@@ -9,6 +9,7 @@ import { ThemedTextInput } from "../ThemedTextInput";
 interface HeaderProps {
   leftButtonText?: string;
   leftButtonBackImage?: boolean;
+  leftButtonTarget?: Href;
   titleText: string;
   rightButtonText?: string;
   rightButtonCallback?: () => void;
@@ -19,6 +20,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   leftButtonText,
   leftButtonBackImage,
+  leftButtonTarget,
   titleText,
   rightButtonText,
   rightButtonCallback,
@@ -35,7 +37,9 @@ export const Header: React.FC<HeaderProps> = ({
             <Pressable
               className="flex flex-row items-center"
               onPress={() => {
-                if (leftButtonBackImage) {
+                if (leftButtonTarget) {
+                  router.push(leftButtonTarget);
+                } else {
                   router.back();
                 }
               }}
