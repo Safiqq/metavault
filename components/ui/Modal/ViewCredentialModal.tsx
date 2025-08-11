@@ -18,6 +18,7 @@ import {
 } from "@/assets/images/icons";
 import { useClipboard } from "@/lib/clipboard";
 import { getFolderName } from "@/lib/supabase/database";
+import { useAlert } from "@/contexts/AlertProvider";
 
 interface ViewCredentialModalProps {
   onClose: () => void;
@@ -32,13 +33,12 @@ export const ViewCredentialModal: React.FC<ViewCredentialModalProps> = ({
   itemType,
   item,
 }) => {
-  console.log("itemtype", itemType);
-  console.log("item", item);
   const [isMoreVisible, setIsMoreVisible] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [folderName, setFolderName] = useState<string>("");
 
   const { copyToClipboard } = useClipboard();
+  const { showAlert } = useAlert();
 
   const handleEdit = onEdit;
 
@@ -46,6 +46,8 @@ export const ViewCredentialModal: React.FC<ViewCredentialModalProps> = ({
     if (itemType === "login" && item && "id" in item && item.id) {
       // await updateLoginDeletedAt(item.id);
       await vaultManager.deleteVaultItem(item.id);
+      // Update local state
+      showAlert("Success", "Item deleted successfully");
     }
   };
 
@@ -137,9 +139,7 @@ export const ViewCredentialModal: React.FC<ViewCredentialModalProps> = ({
                 <View className="flex flex-row gap-2 items-center justify-between">
                   <ThemedText fontSize={14}>{folderName}</ThemedText>
                   <Pressable
-                    onPress={async () =>
-                      await copyToClipboard(folderName)
-                    }
+                    onPress={async () => await copyToClipboard(folderName)}
                   >
                     <CopyIcon width={16} />
                   </Pressable>
@@ -275,9 +275,7 @@ export const ViewCredentialModal: React.FC<ViewCredentialModalProps> = ({
                       <Pressable
                         onPress={async () =>
                           item?.private_key &&
-                          (await copyToClipboard(
-                            item.private_key
-                          ))
+                          (await copyToClipboard(item.private_key))
                         }
                       >
                         <CopyIcon width={16} />
@@ -301,9 +299,7 @@ export const ViewCredentialModal: React.FC<ViewCredentialModalProps> = ({
                       <Pressable
                         onPress={async () =>
                           item?.fingerprint &&
-                          (await copyToClipboard(
-                            item.fingerprint
-                          ))
+                          (await copyToClipboard(item.fingerprint))
                         }
                       >
                         <CopyIcon width={16} />

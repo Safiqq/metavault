@@ -228,7 +228,7 @@ export default function MyVaultTypeScreen() {
 
         <MenuOption
           onSelect={async () => {
-            await copyToClipboard(item.username);
+            await copyToClipboard(type === "Login" ? item.username : item.public_key);
             closeDropdown(item.id);
           }}
         >

@@ -17,11 +17,7 @@ import { getFolders, getCurrentUser } from "@/lib/supabase/database";
 import { vaultManager } from "@/lib/vaultManager";
 import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
-import {
-  Platform,
-  Pressable,
-  View,
-} from "react-native";
+import { Platform, Pressable, View } from "react-native";
 import ReactNativeModal from "react-native-modal";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Line } from "react-native-svg";
@@ -61,14 +57,14 @@ export default function MyVaultFolderScreen() {
     try {
       const user = await getCurrentUser();
       if (!user) return;
-      
+
       const folders = await getFolders(user.id);
-      const currentFolder = folders.find(f => f.id === folder);
+      const currentFolder = folders.find((f) => f.id === folder);
       if (currentFolder) {
         setFolderName(currentFolder.name);
       }
     } catch (error) {
-      console.error('Error fetching folder name:', error);
+      console.error("Error fetching folder name:", error);
     }
   }, [folder]);
 
@@ -78,7 +74,7 @@ export default function MyVaultFolderScreen() {
 
       // Get items for this folder from vaultManager
       const folderItems = vaultManager.getItemsForFolder(folder as string);
-      
+
       const sortedData = folderItems.sort((a, b) => {
         return a.item_name.localeCompare(b.item_name);
       });
@@ -102,18 +98,19 @@ export default function MyVaultFolderScreen() {
     init();
   }, [fetchFolderName, fetchVaultItems]);
 
-
   useEffect(() => {
     if (!searchText.trim()) {
       setFilteredItems(vaultData);
       return;
     }
-    
+
     const query = searchText.toLowerCase();
     const filtered = vaultData.filter((item) => {
-      return item.item_name?.toLowerCase().includes(query) ||
-        (item.username?.toLowerCase().includes(query)) ||
-        (item.public_key?.toLowerCase().includes(query));
+      return (
+        item.item_name?.toLowerCase().includes(query) ||
+        item.username?.toLowerCase().includes(query) ||
+        item.public_key?.toLowerCase().includes(query)
+      );
     });
     setFilteredItems(filtered);
   }, [searchText, vaultData]);
@@ -144,11 +141,13 @@ export default function MyVaultFolderScreen() {
             if (!selectedItem) return;
 
             // Remove item from vault using vaultManager
-            await vaultManager.deleteVaultItem(selectedItem.folder_id);
+            await vaultManager.deleteVaultItem(itemId);
 
             // Update local state
             setVaultData((prevVaultData) =>
-              prevVaultData.filter((item) => item.item_name !== selectedItem.item_name)
+              prevVaultData.filter(
+                (item) => item.item_name !== selectedItem.item_name
+              )
             );
             showAlert("Success", "Item deleted successfully");
           } catch (error) {
@@ -206,25 +205,42 @@ export default function MyVaultFolderScreen() {
 
         <MenuOption
           onSelect={async () => {
-            await copyToClipboard(item.username);
+            await copyToClipboard(
+              item.item_type === "login" ? item.username : item.public_key
+            );
             closeDropdown(item.id);
           }}
         >
           <ThemedText fontSize={14} className="text-white">
-            Copy username
+            Copy {item.item_type === "login" ? "username" : "public key"}
           </ThemedText>
         </MenuOption>
 
         <MenuOption
           onSelect={async () => {
-            await copyToClipboard(item.password);
+            await copyToClipboard(
+              item.item_type === "login" ? item.password : item.private_key
+            );
             closeDropdown(item.id);
           }}
         >
           <ThemedText fontSize={14} className="text-white">
-            Copy password
+            Copy {item.item_type === "login" ? "password" : "private key"}
           </ThemedText>
         </MenuOption>
+
+        {item.item_type === "ssh_key" && (
+          <MenuOption
+            onSelect={async () => {
+              await copyToClipboard(item.fingerprint);
+              closeDropdown(item.id);
+            }}
+          >
+            <ThemedText fontSize={14} className="text-white">
+              Copy fingerprint
+            </ThemedText>
+          </MenuOption>
+        )}
 
         <MenuOption
           onSelect={() => {
@@ -239,7 +255,6 @@ export default function MyVaultFolderScreen() {
       </DropdownMenu>
     </Pressable>
   );
-
 
   return (
     <View
@@ -357,10 +372,10 @@ export default function MyVaultFolderScreen() {
           onlyCredential
         />
       </View>
-      
-      <FullScreenLoadingOverlay 
-        visible={isLoading} 
-        text="Loading folder items..." 
+
+      <FullScreenLoadingOverlay
+        visible={isLoading}
+        text="Loading folder items..."
       />
     </View>
   );

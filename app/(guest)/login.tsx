@@ -305,6 +305,7 @@ export default function LoginScreen() {
         titleText="MetaVault"
         leftButtonText="Back"
         leftButtonBackImage={true}
+        leftButtonTarget={ROUTES.GUEST.LANDING}
       />
       <View className="flex-1 px-12">
         <Spacer size={128} />

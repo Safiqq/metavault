@@ -17,11 +17,10 @@ import * as Device from "expo-device";
  */
 export const useSessionTimeout = () => {
   const { user } = useAuth();
-  const { state, setState } = useAppState();
+  const { state, setState, setSignedOutState } = useAppState();
 
-  const [deviceId, setDeviceId] = useState<string | null>(
-    Platform.OS === "web" ? webStorage.getItem("device_id") : Device.osBuildId
-  );
+  const deviceId =
+    Platform.OS === "web" ? webStorage.getItem("device_id") : Device.osBuildId;
   const { sessionTimeout, sessionTimeoutAction, lastSessionRenewal } = state;
 
   useEffect(() => {
@@ -46,8 +45,7 @@ export const useSessionTimeout = () => {
             .match({ user_id: user?.id, device_id: deviceId });
 
           await supabase.auth.signOut();
-          await clearState();
-          setState(defaultState); // Reset context state to defaults
+          setSignedOutState();
           router.push(ROUTES.ROOT);
         }
         clearInterval(interval);

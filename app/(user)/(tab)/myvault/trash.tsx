@@ -218,25 +218,42 @@ export default function MyVaultTrashScreen() {
 
         <MenuOption
           onSelect={async () => {
-            await copyToClipboard(item.username);
+            await copyToClipboard(
+              item.item_type === "login" ? item.username : item.public_key
+            );
             closeDropdown(item.id);
           }}
         >
           <ThemedText fontSize={14} className="text-white">
-            Copy username
+            Copy {item.item_type === "login" ? "username" : "public key"}
           </ThemedText>
         </MenuOption>
 
         <MenuOption
           onSelect={async () => {
-            await copyToClipboard(item.password);
+            await copyToClipboard(
+              item.item_type === "login" ? item.password : item.private_key
+            );
             closeDropdown(item.id);
           }}
         >
           <ThemedText fontSize={14} className="text-white">
-            Copy password
+            Copy {item.item_type === "login" ? "password" : "private key"}
           </ThemedText>
         </MenuOption>
+
+        {item.item_type === "ssh_key" && (
+          <MenuOption
+            onSelect={async () => {
+              await copyToClipboard(item.fingerprint);
+              closeDropdown(item.id);
+            }}
+          >
+            <ThemedText fontSize={14} className="text-white">
+              Copy fingerprint
+            </ThemedText>
+          </MenuOption>
+        )}
 
         <MenuOption
           onSelect={() => {
@@ -330,9 +347,7 @@ export default function MyVaultTrashScreen() {
         refreshControl={
           Platform.OS !== "web" ? (
             <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
-          ) : (
-            <></>
-          )
+          ) : undefined
         }
       >
         <ThemedText fontSize={12} fontWeight={800}>

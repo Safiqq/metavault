@@ -170,7 +170,7 @@ export class VaultManager {
     // Prepare metadata
     const metadata: EncryptionMetadata = {
       algorithm: "AES-256-CTR-HMAC-SHA256",
-      keyDerivation: "PBKDF2-SHA256-100k",
+      keyDerivation: "PBKDF2-HMAC-SHA256",
       iterations: 100000,
       version: 1,
       timestamp: Date.now(),
@@ -278,7 +278,7 @@ export class VaultManager {
       (item) => item.id === itemId
     );
 
-    if (itemIndex >= 0) {
+     if (itemIndex >= 0) {
       const item = this.cachedVaultData[itemIndex];
       if (item) {
         const now = new Date().toISOString();

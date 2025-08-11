@@ -19,8 +19,8 @@ import { Line } from "../Line";
 import { Switch } from "../Switch";
 
 export function GeneratorPassphrase() {
-  const MIN_PASSPHRASE_WORDS = APP_CONSTANTS.MIN_PASSPHRASE_WORDS;
-  const MAX_PASSPHRASE_WORDS = APP_CONSTANTS.MAX_PASSPHRASE_WORDS;
+  const MIN_PASSPHRASE_WORDS = APP_CONSTANTS.MIN_PASSPHRASE_LENGTH;
+  const MAX_PASSPHRASE_WORDS = APP_CONSTANTS.MAX_PASSPHRASE_LENGTH;
 
   const [passphraseGeneratorStates, setPassphraseGeneratorStates] = useState<{
     wordsNumber: number;
@@ -116,11 +116,16 @@ export function GeneratorPassphrase() {
           <ThemedText fontSize={14}>Words</ThemedText>
           <View className="flex flex-row items-center gap-2">
             <Pressable
-              disabled={passphraseGeneratorStates.wordsNumber <= MIN_PASSPHRASE_WORDS}
+              disabled={
+                passphraseGeneratorStates.wordsNumber <= MIN_PASSPHRASE_WORDS
+              }
               onPress={() =>
                 setPassphraseGeneratorStates((prev) => ({
                   ...prev,
-                  wordsNumber: Math.max(MIN_PASSPHRASE_WORDS, prev.wordsNumber - 1),
+                  wordsNumber: Math.max(
+                    MIN_PASSPHRASE_WORDS,
+                    prev.wordsNumber - 1
+                  ),
                 }))
               }
             >
@@ -138,11 +143,16 @@ export function GeneratorPassphrase() {
               {passphraseGeneratorStates.wordsNumber}
             </ThemedText>
             <Pressable
-              disabled={passphraseGeneratorStates.wordsNumber >= MAX_PASSPHRASE_WORDS}
+              disabled={
+                passphraseGeneratorStates.wordsNumber >= MAX_PASSPHRASE_WORDS
+              }
               onPress={() =>
                 setPassphraseGeneratorStates((prev) => ({
                   ...prev,
-                  wordsNumber: Math.min(MAX_PASSPHRASE_WORDS, prev.wordsNumber + 1),
+                  wordsNumber: Math.min(
+                    MAX_PASSPHRASE_WORDS,
+                    prev.wordsNumber + 1
+                  ),
                 }))
               }
             >

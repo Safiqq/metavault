@@ -221,6 +221,7 @@ export default function RecoverVaultScreen() {
         titleText="MetaVault"
         leftButtonText="Back"
         leftButtonBackImage={true}
+        leftButtonTarget={ROUTES.GUEST.LANDING}
       />
       <ScrollView className="flex-1 px-12">
         {!showPasskeyOptions ? (
