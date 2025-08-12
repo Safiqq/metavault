@@ -34,6 +34,7 @@ import {
   AuthenticationResponseJSON,
 } from "react-native-passkeys/src/ReactNativePasskeys.types";
 import { Header } from "@/components/ui/Header";
+import { AUTH_L_STATES, AUTH_STATES } from "@/lib/types";
 
 // LoginScreen: Handles unlocking the vault using passkey authentication and session renewal.
 export default function LoginScreen() {
@@ -56,7 +57,7 @@ export default function LoginScreen() {
         : Device.osBuildId,
   });
 
-  const { state, resetState } = useAppState();
+  const { state, setState, resetState } = useAppState();
   const { user } = useAuth();
   const { showAlert } = useAlert();
 
@@ -255,6 +256,11 @@ export default function LoginScreen() {
           if (result.success && result.access_token && result.refresh_token) {
             // Set the session using the tokens from vault recovery
             await setSession(result.access_token, result.refresh_token);
+            setState({
+              ...state,
+              authState: AUTH_STATES.LOGGED_IN,
+              currentState: AUTH_L_STATES.IDLE,
+            });
             await upsertSession({
               user_id: user?.id || "",
               device_id: deviceInfo.deviceId || "",
